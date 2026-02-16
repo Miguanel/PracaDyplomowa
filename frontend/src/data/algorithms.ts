@@ -1,4 +1,4 @@
-import { AlgorithmInstruction } from "../store/memoryStore";
+import type { AlgorithmInstruction } from "../store/memoryStore";
 
 export interface AlgorithmDef {
   id: string;

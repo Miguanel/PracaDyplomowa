@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useMemoryStore, AlgorithmInstruction } from '../../store/memoryStore';
+import { useMemoryStore } from '../../store/memoryStore';
+import type { AlgorithmInstruction } from '../../store/memoryStore';
 import { ALGORITHMS_DB } from '../../data/algorithms';
 import { Save, Plus, Layers, Info, Play, Pause, SkipForward, RotateCcw, Trash2, X, ArrowRight } from 'lucide-react';
-import { INSTRUCTION_DEFS, InstructionType } from './instructionDefinitions';
+import { INSTRUCTION_DEFS } from './instructionDefinitions';
+import type { InstructionType } from './instructionDefinitions';
 import clsx from 'clsx';
 
 // --- KOMPONENTY POMOCNICZE ---

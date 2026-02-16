@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import ReactFlow, {
-  Background, Controls, useNodesState, useEdgesState,
-  Node, Edge, Connection, MarkerType, NodeMouseHandler
-} from 'reactflow';
+import ReactFlow, { Background, Controls } from 'reactflow';
+import type { Node, Edge, Connection, NodeMouseHandler } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useMemoryStore } from '../../store/memoryStore';
 import { StructureNode } from './StructureNode';
