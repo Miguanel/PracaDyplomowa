@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 // --- TYPY DANYCH ---
 export interface MemoryBlock {
   address: string;
@@ -88,7 +90,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
     fetchMemory: async () => {
         try {
-            const res = await fetch('http://localhost:8000/api/memory/dump');
+            const res = await fetch('${API_URL}/api/memory/dump');
             if (!res.ok) return;
             const data = await res.json();
             const isSandbox = get().isSandboxMode;
@@ -103,7 +105,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
     resetMemory: async () => {
         set({ isLoading: true });
         try {
-            const response = await fetch('http://localhost:8000/api/memory/reset', { method: 'POST' });
+            const response = await fetch('${API_URL}/api/memory/reset', { method: 'POST' });
             if (response.ok) {
                 const data = await response.json();
                 const cleanState = data.memory_dump;
@@ -138,7 +140,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
                 ...(posX !== undefined && posX !== null && { x: posX }),
                 ...(posY !== undefined && posY !== null && { y: posY })
             };
-            const response = await fetch('http://localhost:8000/api/memory/malloc', {
+            const response = await fetch('${API_URL}/api/memory/malloc', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
@@ -165,7 +167,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
     connectNodes: async (sourceAddr, targetAddr, fieldName) => {
         try {
             const payload = { source_address: sourceAddr, field_name: fieldName, target_address: targetAddr };
-            await fetch('http://localhost:8000/api/memory/write', {
+            await fetch('${API_URL}/api/memory/write', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
             });
             await get().fetchMemory();
@@ -175,7 +177,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
     setVariable: async (name, address) => {
       try {
-          await fetch('http://localhost:8000/api/memory/variable', {
+          await fetch('${API_URL}/api/memory/variable', {
               method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, address }),
           });
           await get().fetchMemory();
@@ -217,7 +219,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
                          else set({ memoryState: newState });
                          set(state => ({ codeHistory: [...state.codeHistory, `delete ${instruction.var_name};`] }));
                          try {
-                             await fetch(`http://localhost:8000/api/memory/free/${addrToFree}`, { method: 'DELETE' });
+                             await fetch(`${API_URL}/api/memory/free/${addrToFree}`, { method: 'DELETE' });
                              await get().fetchMemory();
                          } catch (err) {}
                     }
@@ -225,7 +227,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
                 case 'SET_VAL':
                     const nodeAddrSet = state.stack[instruction.var_name];
                     if (nodeAddrSet) {
-                        await fetch('http://localhost:8000/api/memory/write', {
+                        await fetch('${API_URL}/api/memory/write', {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ source_address: nodeAddrSet, field_name: 'val', target_address: instruction.val_payload })
                         });
@@ -240,7 +242,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
                             const currentVal = parseInt(node.data.val) || 0;
                             const addingVal = parseInt(instruction.val_payload) || 0;
                             const newVal = currentVal + addingVal;
-                            await fetch('http://localhost:8000/api/memory/write', {
+                            await fetch('${API_URL}/api/memory/write', {
                                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ source_address: nodeAddrAdd, field_name: 'val', target_address: newVal })
                             });
@@ -255,7 +257,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
                         const srcNode = state.heap.find(n => n.address === srcDataAddr);
                         if (srcNode) {
                             const valToCopy = srcNode.data.val;
-                            await fetch('http://localhost:8000/api/memory/write', {
+                            await fetch('${API_URL}/api/memory/write', {
                                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ source_address: destAddr, field_name: 'val', target_address: valToCopy })
                             });
@@ -283,7 +285,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
                 case 'SET_FIELD_NULL':
                     const nodeAddrNull = state.stack[instruction.var_name];
                     if (nodeAddrNull && instruction.field_name) {
-                        await fetch('http://localhost:8000/api/memory/write', {
+                        await fetch('${API_URL}/api/memory/write', {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ source_address: nodeAddrNull, field_name: instruction.field_name, target_address: null })
                         });
@@ -340,7 +342,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
                     // 5. Zapisz Wynik do Target Node
                     const targetAddrCmp = state.stack[targetVar];
                     if (targetAddrCmp) {
-                         await fetch('http://localhost:8000/api/memory/write', {
+                         await fetch('${API_URL}/api/memory/write', {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 source_address: targetAddrCmp,
@@ -370,7 +372,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         const originalState = get().memoryState;
         set({ isSandboxMode: false, sandboxMemoryState: null, initialSandboxState: null });
         try {
-            await fetch('http://localhost:8000/api/memory/restore', {
+            await fetch('${API_URL}/api/memory/restore', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(originalState)
             });
@@ -400,7 +402,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
     fetchAlgorithms: async () => {
         try {
-            const res = await fetch('http://localhost:8000/api/algorithms');
+            const res = await fetch('${API_URL}/api/algorithms');
             if (res.ok) set({ customAlgorithms: await res.json() });
         } catch (err) { console.warn("Fetch algorithms error"); }
     },
@@ -408,7 +410,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
     saveCustomAlgorithm: async (algo) => {
         set(state => ({ customAlgorithms: [...state.customAlgorithms, algo] }));
         try {
-            await fetch('http://localhost:8000/api/algorithms', {
+            await fetch('${API_URL}/api/algorithms', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(algo)
             });
         } catch (e) { console.error("Save error"); }

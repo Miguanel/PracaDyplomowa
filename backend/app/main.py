@@ -25,7 +25,7 @@ origins = ["*"] # W produkcji podaj konkretny adres, np. "http://localhost:5173"
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # Dla bezpieczeństwa możesz tu wpisać potem URL frontendu z Render.com
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
