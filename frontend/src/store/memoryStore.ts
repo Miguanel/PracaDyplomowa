@@ -103,24 +103,43 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
     },
 
     resetMemory: async () => {
-        set({ isLoading: true });
-        try {
-            const response = await fetch('${API_URL}/api/memory/reset', { method: 'POST' });
-            if (response.ok) {
-                const data = await response.json();
-                const cleanState = data.memory_dump;
-                set({
-                    memoryState: cleanState,
-                    sandboxMemoryState: get().isSandboxMode ? cleanState : null,
-                    codeHistory: [],
-                    error: null,
-                    currentStepIndex: -1,
-                    activeAlgorithm: null
-                });
-            }
-        } catch (err) { console.error("Reset err:", err); }
-        finally { set({ isLoading: false }); }
-    },
+    set({ isLoading: true });
+
+    // Zmienna url, żebyśmy mogli ją wypisać w konsoli
+    const targetUrl = `${API_URL}/api/memory/reset`;
+    console.log("🕵️ ŚLEDZTWO - WYSYŁAM ZAPYTANIE DO:", targetUrl);
+
+    try {
+      const res = await fetch(targetUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log("🕵️ ŚLEDZTWO - STATUS Z SERWERA:", res.status);
+
+      // Pobieramy odpowiedź jako zwykły tekst, żeby sprawdzić czy nie jest pusta
+      const text = await res.text();
+      console.log("🕵️ ŚLEDZTWO - SUROWA ODPOWIEDŹ:", text);
+
+      // Dopiero teraz próbujemy zamienić na JSON
+      const data = text ? JSON.parse(text) : {};
+
+      set({
+          memoryState: data,
+          steps: [],
+          currentStepIndex: -1,
+          isPlaying: false,
+          activeAlgorithm: null,
+          comparisonResult: null
+      });
+    } catch (error) {
+      console.error("🕵️ ŚLEDZTWO - BŁĄD CAŁKOWITY:", error);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
 
     allocateNode: async (label, val) => {
         set({ isLoading: true, error: null });
