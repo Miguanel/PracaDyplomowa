@@ -125,10 +125,10 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
               data = null;
           }
 
-          // KULOODPORNE ZABEZPIECZENIE (Nawet jak backend padnie, React nie wybuchnie)
+          // KULOODPORNE ZABEZPIECZENIE (Używamy tablic [], a nie obiektów {})
           const safeMemoryState = {
-              stack: data?.stack || {},
-              heap: data?.heap || {}
+              stack: Array.isArray(data?.stack) ? data.stack : [],
+              heap: Array.isArray(data?.heap) ? data.heap : []
           };
 
           set({
@@ -140,9 +140,9 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
           });
         } catch (error) {
           console.error("🔥 BŁĄD POŁĄCZENIA / CORS:", error);
-          // Ustawiamy bezpieczne puste wartości
+          // Bezpieczne puste tablice, żeby .map() nie wybuchło
           set({
-              memoryState: { stack: {}, heap: {} },
+              memoryState: { stack: [], heap: [] },
               steps: [],
               currentStepIndex: -1,
               isPlaying: false,
