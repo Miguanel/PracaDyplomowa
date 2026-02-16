@@ -82,7 +82,6 @@ export const AlgorithmBuilder = () => {
       executeSandboxStep,
       isSandboxMode,
       loadAlgorithm, // <--- WAŻNE: Do aktywacji przewodnika
-      comparisonResult // <--- WAŻNE: Do wyświetlania wyniku w stopce
   } = useMemoryStore();
 
   const [algoName, setAlgoName] = useState("");
@@ -482,11 +481,6 @@ export const AlgorithmBuilder = () => {
          <div className="bg-black/40 p-2 rounded border border-gray-800 flex flex-col gap-2">
              <div className="flex justify-between items-center text-[10px] uppercase text-gray-500 font-bold mb-1">
                  <span>Testowanie</span>
-                 {comparisonResult !== null && (
-                     <span className={clsx(comparisonResult ? "text-green-500" : "text-red-500")}>
-                        LAST: {comparisonResult ? "TRUE" : "FALSE"}
-                     </span>
-                 )}
              </div>
              <div className="flex gap-1 justify-center">
                  <button onClick={() => { setPreviewIndex(-1); setIsPlaying(false); }} className="p-2 bg-gray-800 hover:bg-gray-700 text-white rounded"><RotateCcw size={14} /></button>

@@ -93,7 +93,7 @@ export const AlgorithmGuide = () => {
 
               {/* WŁAŚCIWY KROK */}
               <div
-                ref={el => stepRefs.current[index] = el}
+                ref={el => { stepRefs.current[index] = el; }}
                 className={clsx(
                   "mb-2 p-3 rounded border transition-all duration-300 text-xs leading-relaxed relative ml-2",
                   isActive

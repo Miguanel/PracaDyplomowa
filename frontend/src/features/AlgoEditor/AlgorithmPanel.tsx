@@ -3,7 +3,7 @@ import { useMemoryStore, AlgorithmInstruction } from '../../store/memoryStore';
 import { Play, ArrowRight, CornerDownRight, Link, Trash2 } from 'lucide-react';
 
 export const AlgorithmPanel = () => {
-  const { executeStep, resetMemory } = useMemoryStore(); // Zakładam, że dodamy resetMemory później
+  const { runAlgorithmStep, resetMemory } = useMemoryStore(); // Zakładam, że dodamy resetMemory później
 
   // Stan lokalny
   const [targetVar, setTargetVar] = useState("curr");
