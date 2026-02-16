@@ -103,43 +103,55 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
     },
 
     resetMemory: async () => {
-    set({ isLoading: true });
+        set({ isLoading: true });
+        const targetUrl = `${API_URL}/api/memory/reset`;
 
-    // Zmienna url, żebyśmy mogli ją wypisać w konsoli
-    const targetUrl = `${API_URL}/api/memory/reset`;
-    console.log("🕵️ ŚLEDZTWO - WYSYŁAM ZAPYTANIE DO:", targetUrl);
+        console.log("📡 WYSYŁAM DO:", targetUrl);
 
-    try {
-      const res = await fetch(targetUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
+        try {
+          const res = await fetch(targetUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+
+          const text = await res.text();
+          console.log("📦 ODPOWIEDŹ BACKENDU:", text);
+
+          let data;
+          try {
+              data = text ? JSON.parse(text) : null;
+          } catch (e) {
+              console.error("❌ Otrzymano HTML lub błąd zamiast JSONa!");
+              data = null;
+          }
+
+          // KULOODPORNE ZABEZPIECZENIE (Nawet jak backend padnie, React nie wybuchnie)
+          const safeMemoryState = {
+              stack: data?.stack || {},
+              heap: data?.heap || {}
+          };
+
+          set({
+              memoryState: safeMemoryState,
+              steps: [],
+              currentStepIndex: -1,
+              isPlaying: false,
+              comparisonResult: null
+          });
+        } catch (error) {
+          console.error("🔥 BŁĄD POŁĄCZENIA / CORS:", error);
+          // Ustawiamy bezpieczne puste wartości
+          set({
+              memoryState: { stack: {}, heap: {} },
+              steps: [],
+              currentStepIndex: -1,
+              isPlaying: false,
+              comparisonResult: null
+          });
+        } finally {
+          set({ isLoading: false });
         }
-      });
-
-      console.log("🕵️ ŚLEDZTWO - STATUS Z SERWERA:", res.status);
-
-      // Pobieramy odpowiedź jako zwykły tekst, żeby sprawdzić czy nie jest pusta
-      const text = await res.text();
-      console.log("🕵️ ŚLEDZTWO - SUROWA ODPOWIEDŹ:", text);
-
-      // Dopiero teraz próbujemy zamienić na JSON
-      const data = text ? JSON.parse(text) : {};
-
-      set({
-          memoryState: data,
-          steps: [],
-          currentStepIndex: -1,
-          isPlaying: false,
-          activeAlgorithm: null,
-          comparisonResult: null
-      });
-    } catch (error) {
-      console.error("🕵️ ŚLEDZTWO - BŁĄD CAŁKOWITY:", error);
-    } finally {
-      set({ isLoading: false });
-    }
-  },
+      },
 
     allocateNode: async (label, val) => {
         set({ isLoading: true, error: null });
