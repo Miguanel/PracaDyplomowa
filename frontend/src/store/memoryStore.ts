@@ -106,8 +106,6 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         set({ isLoading: true });
         const targetUrl = `${API_URL}/api/memory/reset`;
 
-        console.log("📡 WYSYŁAM DO:", targetUrl);
-
         try {
           const res = await fetch(targetUrl, {
             method: 'POST',
@@ -115,20 +113,20 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
           });
 
           const text = await res.text();
-          console.log("📦 ODPOWIEDŹ BACKENDU:", text);
-
-          let data;
+          let parsed;
           try {
-              data = text ? JSON.parse(text) : null;
+              parsed = text ? JSON.parse(text) : null;
           } catch (e) {
-              console.error("❌ Otrzymano HTML lub błąd zamiast JSONa!");
-              data = null;
+              parsed = null;
           }
 
-          // KULOODPORNE ZABEZPIECZENIE (Używamy tablic [], a nie obiektów {})
+          // KLUCZOWY MOMENT: Wyciągamy dane z pudełka 'memory_dump' (jeśli istnieje)
+          const memoryData = parsed?.memory_dump ? parsed.memory_dump : parsed;
+
+          // Bezpiecznie przypisujemy stos (obiekt) i stertę (lista)
           const safeMemoryState = {
-              stack: Array.isArray(data?.stack) ? data.stack : [],
-              heap: Array.isArray(data?.heap) ? data.heap : []
+              stack: memoryData?.stack || {},
+              heap: Array.isArray(memoryData?.heap) ? memoryData.heap : []
           };
 
           set({
@@ -139,10 +137,9 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
               comparisonResult: null
           });
         } catch (error) {
-          console.error("🔥 BŁĄD POŁĄCZENIA / CORS:", error);
-          // Bezpieczne puste tablice, żeby .map() nie wybuchło
+          console.error("Błąd połączenia:", error);
           set({
-              memoryState: { stack: [], heap: [] },
+              memoryState: { stack: {}, heap: [] },
               steps: [],
               currentStepIndex: -1,
               isPlaying: false,
