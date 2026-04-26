@@ -51,8 +51,8 @@ export default function App() {
       ram:     { x: screenW / 2 - 250, y: screenH - 260, w: 500, h: 240, pinned: false, minimized: false, z: 10 }
     });
 
-    const hasSeenTutorial = localStorage.getItem('edualgo_tutorial_completed');
-    if (!hasSeenTutorial) setShowTutorial(true);
+    //const hasSeenTutorial = localStorage.getItem('edualgo_tutorial_completed');
+    //if (!hasSeenTutorial) setShowTutorial(true);
 
     const handleResize = () => applySmartClamp();
     window.addEventListener('resize', handleResize);
@@ -97,7 +97,16 @@ export default function App() {
         </div>
       </header>
 
-      {showWelcome && <WelcomeWindow zIndexManager={bringToFront} onClose={() => setShowWelcome(false)} />}
+      {showWelcome && (
+          <WelcomeWindow
+            zIndexManager={bringToFront}
+            onStartTutorial={() => {
+              setShowWelcome(false); // Zamyka okno powitalne
+              setShowTutorial(true); // Uruchamia poradnik
+            }}
+            onClose={() => setShowWelcome(false)} // Samo zamknięcie (Pomiń)
+          />
+        )}
 
       {/* --- ZREFAKTORYZOWANE OKNA MODULARNE --- */}
       <PlayerWindow
