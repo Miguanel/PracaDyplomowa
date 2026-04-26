@@ -5,47 +5,46 @@ import { Cpu, Rocket, BookOpen, ShieldCheck, Terminal, Zap, Code2, Globe, Server
 import clsx from 'clsx';
 
 export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
+  // 1. Zwiększona stała wysokość, by zawartość swobodnie oddychała
+  const FIXED_WIDTH = 550;
+  const FIXED_HEIGHT = 600;
+
   const [state, setState] = useState({
-    x: window.innerWidth / 2 - 275,
-    y: window.innerHeight / 2 - 240,
-    w: 550,
-    h: 490,
+    x: window.innerWidth / 2 - FIXED_WIDTH / 2,
+    y: window.innerHeight / 2 - FIXED_HEIGHT / 2,
+    w: FIXED_WIDTH,
+    h: FIXED_HEIGHT,
     minimized: false,
     pinned: false,
     z: 9999
   });
 
-  const [backendStatus, setBackendStatus] = useState('waking'); // 'waking' | 'ready' | 'error'
+  const [backendStatus, setBackendStatus] = useState('waking');
 
-  // ==========================================================================
-  // SPRAWDZANIE STATUSU BACKENDU (Polling)
-  // ==========================================================================
   useEffect(() => {
     let intervalId;
 
     const checkHealth = async () => {
       try {
-        // PAMIĘTAJ: Zmień na prawdziwy URL API Twojego backendu na Renderze
         const response = await fetch('http://localhost:8000/', { method: 'GET' });
 
         if (response.ok) {
           setBackendStatus('ready');
-          clearInterval(intervalId); // Zatrzymujemy sprawdzanie, gdy backend wstanie
+          clearInterval(intervalId);
         }
       } catch (error) {
-        // Backend nadal śpi lub jest niedostępny
         setBackendStatus('waking');
       }
     };
 
-    checkHealth(); // Pierwsze sprawdzenie od razu
-    intervalId = setInterval(checkHealth, 3000); // Kolejne co 3 sekundy
+    checkHealth();
+    intervalId = setInterval(checkHealth, 3000);
 
     return () => clearInterval(intervalId);
   }, []);
 
   const handlePosChange = (id, x, y) => setState(prev => ({ ...prev, x, y }));
-  const handleSizeChange = (id, size, pos) => setState(prev => ({ ...prev, w: size.w, h: size.h, x: pos.x, y: pos.y }));
+  const handleSizeChange = () => {};
 
   const MinimizedView = (
     <div className="p-2 bg-blue-900/20 shadow-inner flex items-center justify-between group cursor-pointer" onClick={() => setState(prev => ({...prev, minimized: false}))}>
@@ -58,10 +57,11 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
   );
 
   const ExpandedView = (
-    <div className="flex flex-col h-full w-full bg-[#0a0a0c] overflow-hidden nodrag">
+    // DODANO: absolute inset-0 - zmusza kontener do idealnego wpasowania się w okno
+    <div className="absolute inset-0 flex flex-col bg-[#0a0a0c] overflow-hidden nodrag rounded-lg">
 
       {/* SEKTOR 1: NAGŁÓWEK META */}
-      <div className="shrink-0 p-6 bg-gradient-to-br from-blue-900/20 to-transparent border-b border-gray-800">
+      <div className="shrink-0 p-6 bg-gradient-to-br from-blue-900/20 to-transparent border-b border-gray-800 relative z-10">
         <div className="flex items-center gap-5">
           <div className="relative shrink-0">
             <div className="absolute inset-0 bg-blue-500 blur-xl opacity-20 animate-pulse"></div>
@@ -81,8 +81,8 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
         </div>
       </div>
 
-      {/* SEKTOR 2: TREŚĆ */}
-      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6 space-y-5">
+      {/* SEKTOR 2: TREŚĆ (Scrollowana) */}
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6 space-y-5 relative z-0">
 
         {/* DYNAMICZNY PANEL STATUSU BACKENDU */}
         <div className={clsx(
@@ -150,8 +150,8 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
         </div>
       </div>
 
-      {/* SEKTOR 3: STOPKA (Przycisk Poradnika) */}
-      <div className="shrink-0 p-4 bg-gray-950/50 border-t border-gray-800 flex flex-col gap-2">
+      {/* SEKTOR 3: STOPKA - Zmieniono tło na pełne (bg-gray-950) i dodano z-20 */}
+      <div className="shrink-0 p-4 bg-gray-950 border-t border-gray-800 flex flex-col gap-2 relative z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.5)]">
         <button
           onClick={onStartTutorial}
           className={clsx(
@@ -187,12 +187,15 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
       title="System Boot Terminal"
       icon={<Rocket size={14} className="text-blue-400" />}
       {...state}
+      w={FIXED_WIDTH}
+      h={FIXED_HEIGHT}
       onPosChange={handlePosChange}
       onSizeChange={handleSizeChange}
       onPinToggle={() => setState(prev => ({ ...prev, pinned: !prev.pinned }))}
       onMinimizeToggle={() => setState(prev => ({ ...prev, minimized: !prev.minimized }))}
       zIndexManager={zIndexManager}
       minimizedContent={MinimizedView}
+      className="disable-resizer"
     >
       {ExpandedView}
     </FloatingWindow>
