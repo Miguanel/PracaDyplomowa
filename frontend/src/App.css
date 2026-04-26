@@ -163,3 +163,13 @@ body, html, #root {
   background: #4b5563;
   border-radius: 4px;
 }
+
+/* W pliku App.css */
+.window-transition {
+  transition: left 0.2s ease-out, top 0.2s ease-out, width 0.2s ease-out, height 0.2s ease-out;
+}
+
+/* Podczas dragu wyłączamy animację, żeby ruch był responsywny */
+.is-dragging {
+  transition: none !important;
+}

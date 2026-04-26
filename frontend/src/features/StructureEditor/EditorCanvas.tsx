@@ -1,9 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import ReactFlow, { Background, Controls, useNodesState, useEdgesState, MarkerType } from 'reactflow';
+import { useCallback, useEffect, useRef } from 'react';
+// USUNIĘTO 'Controls' z importu poniżej:
+import ReactFlow, { Background, useNodesState, useEdgesState, MarkerType } from 'reactflow';
 import type { Node, Edge, Connection, NodeMouseHandler } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useMemoryStore } from '../../store/memoryStore';
 import { StructureNode } from './StructureNode';
+
+// 1. ZMIANA: Przeniesiono nodeTypes POZA komponent funkcyjny!
+// Dzięki temu obiekt ten nie jest odtwarzany przy każdym renderze,
+// a React Flow przestanie narzekać na Warning #002 w konsoli.
+const nodeTypes = { structureNode: StructureNode };
+const proOptions = { hideAttribution: true };
 
 export const EditorCanvas = () => {
   const {
@@ -25,7 +32,6 @@ export const EditorCanvas = () => {
     nodesRef.current = nodes;
   }, [nodes]);
 
-  const nodeTypes = useMemo(() => ({ structureNode: StructureNode }), []);
   const activeState = (isSandboxMode && sandboxMemoryState) ? sandboxMemoryState : memoryState;
 
   useEffect(() => {
@@ -127,6 +133,8 @@ export const EditorCanvas = () => {
   }, [activeState, isSandboxMode, isConnectionNew, isNodeNew, setNodes, setEdges]);
 
   const onConnect = useCallback((params: Connection) => {
+    // Kiedy użytkownik przeciągnie strzałkę z Węzła A z portu 'next' do Węzła B
+    // Przykład: target_expression: "0x100", field_name: "next", source_expression: "0x108"
     if (params.source && params.target && params.sourceHandle) {
       connectNodes(params.source, params.target, params.sourceHandle);
     }
@@ -135,7 +143,13 @@ export const EditorCanvas = () => {
   const onNodeClick: NodeMouseHandler = useCallback((event, node) => {
     if (isSandboxMode) return;
     const varName = window.prompt(`Nazwa zmiennej dla ${node.data.address}:`, "temp");
-    if (varName?.trim()) setVariable(varName.trim(), node.id);
+
+    // ZMIANA: Ponieważ nowy Backend wspiera parsowanie i twardych adresów (np. "0x1A4"),
+    // i stringów (np. "curr->next"), możemy bezpiecznie wysłać twardy adres.
+    // Funkcja resolve_pointer sprawdzi, że zaczyna się od "0x" i zaakceptuje go.
+    if (varName?.trim()) {
+        setVariable(varName.trim(), node.id);
+    }
   }, [setVariable, isSandboxMode]);
 
   return (
@@ -154,10 +168,10 @@ export const EditorCanvas = () => {
         onConnect={onConnect}
         onNodeClick={onNodeClick}
         nodeTypes={nodeTypes}
+        proOptions={proOptions}
         fitView
       >
         <Background color={isSandboxMode ? "#1e1b4b" : "#111"} gap={25} size={1} />
-        <Controls className="bg-gray-800 border-gray-700 fill-white" />
       </ReactFlow>
     </div>
   );

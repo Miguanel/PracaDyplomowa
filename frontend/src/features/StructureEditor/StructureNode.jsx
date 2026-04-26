@@ -1,20 +1,20 @@
 import { memo } from 'react';
 import { Handle, Position } from 'reactflow';
-import type { NodeProps } from 'reactflow';
+
 import { Tag } from 'lucide-react';
 import clsx from 'clsx';
+import { useMemoryStore } from '../../store/memoryStore'; // <-- 1. IMPORT MAGAZYNU
 
-// Definicja typów danych węzła
-interface NodeData {
-  address: string;
-  val: number | object;
-  variables: string[];
-}
 
-export const StructureNode = memo(({ data, selected }: NodeProps<NodeData>) => {
+export const StructureNode = memo(({ data, selected }) => {
+
+  // --- 2. POBRANIE STANU PODŚWIETLENIA ---
+  const highlightedAddress = useMemoryStore(state => state.highlightedAddress);
+  const isHighlighted = highlightedAddress === data.address;
+  // ---------------------------------------
 
   const displayVal = typeof data.val === 'object' && data.val !== null && 'val' in data.val
-    ? (data.val as any).val
+    ? data.val.val
     : data.val;
 
   return (
@@ -27,7 +27,9 @@ export const StructureNode = memo(({ data, selected }: NodeProps<NodeData>) => {
           "relative w-40 bg-gray-900 border-2 rounded-lg transition-all duration-300",
           selected
             ? "border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.6)] scale-105 z-40"
-            : "border-gray-600 shadow-xl hover:border-gray-500 z-30"
+            : isHighlighted
+               ? "border-blue-400 shadow-[0_0_20px_rgba(96,165,250,0.8)] scale-105 z-40" // <-- 3. EFEKT ŚWIECENIA
+               : "border-gray-600 shadow-xl hover:border-gray-500 z-30"
         )}
       >
 

@@ -1,25 +1,7 @@
-// Typy instrukcji (rozszerzone)
-export type InstructionType =
-  | 'ALLOC' | 'FREE'
-  | 'ASSIGN_VAR' | 'ASSIGN_FIELD'
-  | 'STEP_FORWARD'   // NOWOŚĆ: curr = curr->next
-  | 'SET_FIELD_NULL' // NOWOŚĆ: node->next = NULL
-  | 'SET_VAL' | 'COPY_VAL' | 'MATH_ADD'
-  | 'CHECK_NULL'
-  | 'COMPARE';
+// Typy i interfejsy z TypeScriptu zostały usunięte.
+// Zostaje tylko czysty obiekt JavaScript.
 
-
-export interface InstructionDef {
-  cmd: InstructionType;
-  category: 'MEMORY' | 'POINTERS' | 'DATA' | 'CONTROL';
-  label: string;
-  description: string;
-  syntax: string;
-  color: string;
-  inputs: string[];
-}
-
-export const INSTRUCTION_DEFS: Record<string, InstructionDef> = {
+export const INSTRUCTION_DEFS = {
 
   // --- MEMORY ---
   ALLOC: {

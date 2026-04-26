@@ -6,7 +6,9 @@ export const MemoryGrid = () => {
   const {
     memoryState,
     sandboxMemoryState,
-    isSandboxMode
+    isSandboxMode,
+    highlightedAddress,
+    setHighlightedAddress
   } = useMemoryStore();
 
   // 1. Wybór stanu: Czy pokazujemy prawdę, czy symulację?
@@ -57,11 +59,14 @@ export const MemoryGrid = () => {
           return (
             <div
               key={block.address}
+              onClick={() => setHighlightedAddress(highlightedAddress === block.address ? null : block.address)}
               className={clsx(
-                "rounded border p-2 text-xs font-mono relative group transition-all hover:scale-[1.01] duration-200",
-                isSandboxMode
-                  ? "bg-slate-800/50 border-slate-700 hover:border-indigo-500/50 hover:bg-slate-800"
-                  : "bg-gray-800/40 border-gray-700 hover:border-green-500/50 hover:bg-gray-800"
+                "rounded border p-2 text-xs font-mono relative group transition-all duration-200 cursor-pointer",
+                highlightedAddress === block.address
+                  ? "scale-[1.02] border-blue-500 bg-blue-900/30 shadow-[0_0_15px_rgba(59,130,246,0.4)] z-10"
+                  : isSandboxMode
+                    ? "bg-slate-800/50 border-slate-700 hover:border-indigo-500/50 hover:bg-slate-800 hover:scale-[1.01]"
+                    : "bg-gray-800/40 border-gray-700 hover:border-green-500/50 hover:bg-gray-800 hover:scale-[1.01]"
               )}
             >
               {/* LINIA 1: ADRES + ZMIENNE (STACK TAGS) */}

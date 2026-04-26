@@ -3,78 +3,7 @@ import { create } from 'zustand';
 // Wyciągamy adres API ze zmiennych środowiskowych (Vite).
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-// --- TYPY DANYCH ---
-export interface MemoryBlock {
-  address: string;
-  size: number;
-  data: any;
-  label?: string;
-  visual_x?: number;
-  visual_y?: number;
-}
-
-export interface MemoryState {
-  heap: MemoryBlock[];
-  stack: Record<string, string>;
-}
-
-export interface AlgorithmInstruction {
-  cmd: "ASSIGN_VAR" | "ASSIGN_FIELD" | "ALLOC" | "FREE" | "SET_VAL" | "MATH_ADD" | "COPY_VAL" | "CHECK_NULL" | "STEP_FORWARD" | "SET_FIELD_NULL" | "COMPARE";
-  var_name: string;
-  source_var?: string;
-  field_name?: string;
-  val_payload?: any;
-  explanation?: string;
-  group?: string;
-}
-
-export interface AlgorithmDef {
-  id: string;
-  title: string;
-  description: string;
-  codeLines: string[];
-  steps: AlgorithmInstruction[];
-}
-
-interface MemoryStore {
-  memoryState: MemoryState;
-  sandboxMemoryState: MemoryState | null;
-  initialSandboxState: MemoryState | null;
-
-  codeHistory: string[];
-  isLoading: boolean;
-  error: string | null;
-
-  algorithms: AlgorithmDef[];
-  customAlgorithms: AlgorithmDef[];
-  activeAlgorithm: AlgorithmDef | null;
-  currentStepIndex: number;
-
-  isSandboxMode: boolean;
-
-  fetchMemory: () => Promise<void>;
-  resetMemory: () => Promise<void>;
-
-  allocateNode: (label: string, val: any) => Promise<void>;
-  connectNodes: (sourceAddr: string, targetAddr: string, fieldName: string) => Promise<void>;
-  setVariable: (name: string, address: string) => Promise<void>;
-
-  fetchAlgorithms: () => Promise<void>;
-  saveCustomAlgorithm: (algo: AlgorithmDef) => Promise<void>;
-  loadAlgorithm: (algo: AlgorithmDef) => void;
-  nextAlgoStep: () => Promise<void>;
-
-  runAlgorithmStep: (instruction: AlgorithmInstruction) => Promise<void>;
-
-  enterSandboxMode: () => Promise<void>;
-  exitSandboxMode: () => void;
-  executeSandboxStep: (instruction: AlgorithmInstruction) => Promise<void>;
-
-  isConnectionNew: (sourceAddr: string, field: string, targetAddr: string) => boolean;
-  isNodeNew: (address: string) => boolean;
-}
-
-export const useMemoryStore = create<MemoryStore>((set, get) => ({
+export const useMemoryStore = create((set, get) => ({
     memoryState: { heap: [], stack: {} },
     sandboxMemoryState: null,
     initialSandboxState: null,
@@ -87,7 +16,20 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
     customAlgorithms: [],
     activeAlgorithm: null,
     currentStepIndex: -1,
+    highlightedAddress: null,
+    setHighlightedAddress: (addr) => set({ highlightedAddress: addr }),
     isSandboxMode: false,
+
+    // --- IMPLEMENTACJA LIVE SYNC ---
+    setDraftAlgorithm: (algo, stepIndex) => set({
+      activeAlgorithm: algo,
+      currentStepIndex: stepIndex
+    }),
+
+    clearAlgorithm: () => set({
+      activeAlgorithm: null,
+      currentStepIndex: -1
+    }),
 
     fetchMemory: async () => {
         try {
@@ -95,7 +37,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
             if (!res.ok) return;
             const data = await res.json();
 
-            // BEZPIECZNE ROZPAKOWANIE (jak w resetMemory)
+            // BEZPIECZNE ROZPAKOWANIE
             const memoryData = data?.memory_dump ? data.memory_dump : data;
 
             const isSandbox = get().isSandboxMode;
@@ -129,10 +71,8 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
               parsed = null;
           }
 
-          // KLUCZOWY MOMENT: Wyciągamy dane z pudełka 'memory_dump' (jeśli istnieje)
           const memoryData = parsed?.memory_dump ? parsed.memory_dump : parsed;
 
-          // Bezpiecznie przypisujemy stos (obiekt) i stertę (lista)
           const safeMemoryState = {
               stack: memoryData?.stack || {},
               heap: Array.isArray(memoryData?.heap) ? memoryData.heap : []
@@ -163,8 +103,8 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         set({ isLoading: true, error: null });
         try {
             let valueToSend = val;
-            let posX: number | undefined = undefined;
-            let posY: number | undefined = undefined;
+            let posX = undefined;
+            let posY = undefined;
             if (typeof val === 'object' && val !== null) {
                 if ('val' in val) valueToSend = val.val;
                 if ('x' in val) posX = val.x;
@@ -185,11 +125,10 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
             if (!response.ok) throw new Error(`Błąd alokacji`);
             const data = await response.json();
 
-            // BEZPIECZNE ROZPAKOWANIE
             const memoryData = data?.memory_dump ? data.memory_dump : data;
             const newHeap = Array.isArray(memoryData?.heap) ? memoryData.heap : [];
 
-            let createdNode = [...newHeap].reverse().find((b: any) =>
+            let createdNode = [...newHeap].reverse().find((b) =>
                 (b.data && b.data.label === label) || b.label === label
             );
             if (!createdNode && newHeap.length > 0) createdNode = newHeap[newHeap.length - 1];
@@ -205,24 +144,30 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
             const code = `${label} = new Node(${payload.fields.val});`;
             set(state => ({ codeHistory: [...state.codeHistory, code] }));
-        } catch (err: any) { set({ error: err.message }); } finally { set({ isLoading: false }); }
+        } catch (err) { set({ error: err.message }); } finally { set({ isLoading: false }); }
     },
 
     connectNodes: async (sourceAddr, targetAddr, fieldName) => {
         try {
-            const payload = { source_address: sourceAddr, field_name: fieldName, target_address: targetAddr };
-            await fetch(`${API_URL}/api/memory/write`, {
+            const payload = {
+                target_expression: sourceAddr,
+                field_name: fieldName,
+                source_expression: targetAddr
+            };
+            await fetch(`${API_URL}/api/memory/assign_pointer`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
             });
             await get().fetchMemory();
-            set(state => ({ codeHistory: [...state.codeHistory, `Nodes[${sourceAddr}]->${fieldName} = ${targetAddr};`] }));
+            set(state => ({ codeHistory: [...state.codeHistory, `${sourceAddr}->${fieldName} = ${targetAddr};`] }));
         } catch (err) { console.error("Connect err:", err); }
     },
 
     setVariable: async (name, address) => {
       try {
           await fetch(`${API_URL}/api/memory/variable`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, address }),
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: name, source_expression: address }),
           });
           await get().fetchMemory();
       } catch (err) { console.error("SetVariable error:", err); }
@@ -238,100 +183,66 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         try {
             switch (instruction.cmd) {
                 case 'ALLOC': await allocateNode(instruction.var_name, instruction.val_payload); break;
+
                 case 'ASSIGN_FIELD':
-                    const sAddr = state.stack[instruction.var_name];
-                    const tAddr = state.stack[instruction.source_var || ""];
-                    if (sAddr && tAddr && instruction.field_name) await connectNodes(sAddr, tAddr, instruction.field_name);
+                    const targetExprField = instruction.var_name;
+                    const sourceExprField = instruction.source_var || "NULL";
+                    if (targetExprField && instruction.field_name) {
+                        await connectNodes(targetExprField, sourceExprField, instruction.field_name);
+                    }
                     break;
+
                 case 'ASSIGN_VAR':
-                    const srcAddr = state.stack[instruction.source_var || ""];
-                    if (srcAddr) {
-                        const newStack = { ...state.stack, [instruction.var_name]: srcAddr };
-                        const newState = { ...state, stack: newStack };
-                        if (get().isSandboxMode) set({ sandboxMemoryState: newState });
-                        else set({ memoryState: newState });
+                    const targetVarName = instruction.var_name;
+                    const sourceExprVar = instruction.source_var || "NULL";
+                    if (targetVarName) {
+                        await get().setVariable(targetVarName, sourceExprVar);
+                        set(state => ({ codeHistory: [...state.codeHistory, `${targetVarName} = ${sourceExprVar};`] }));
                     }
                     break;
+
                 case 'FREE':
-                    const addrToFree = state.stack[instruction.var_name];
-                    if (addrToFree) {
-                         const currentStack = { ...state.stack };
-                         delete currentStack[instruction.var_name];
-                         const newHeap = state.heap.filter(b => b.address !== addrToFree);
-                         const newState = { heap: newHeap, stack: currentStack };
-                         if (get().isSandboxMode) set({ sandboxMemoryState: newState });
-                         else set({ memoryState: newState });
-                         set(state => ({ codeHistory: [...state.codeHistory, `delete ${instruction.var_name};`] }));
+                    const exprToFree = instruction.var_name;
+                    if (exprToFree) {
+                         set(state => ({ codeHistory: [...state.codeHistory, `delete ${exprToFree};`] }));
                          try {
-                             await fetch(`${API_URL}/api/memory/free/${addrToFree}`, { method: 'DELETE' });
+                             await fetch(`${API_URL}/api/memory/free`, {
+                                 method: 'POST',
+                                 headers: { 'Content-Type': 'application/json' },
+                                 body: JSON.stringify({ target_expression: exprToFree })
+                             });
                              await get().fetchMemory();
-                         } catch (err) {}
+                         } catch (err) { console.error("Free err", err); }
                     }
                     break;
+
                 case 'SET_VAL':
-                    const nodeAddrSet = state.stack[instruction.var_name];
-                    if (nodeAddrSet) {
-                        await fetch(`${API_URL}/api/memory/write`, {
+                    const targetExprVal = instruction.var_name;
+                    if (targetExprVal) {
+                        await fetch(`${API_URL}/api/memory/write_value`, {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ source_address: nodeAddrSet, field_name: 'val', target_address: instruction.val_payload })
+                            body: JSON.stringify({ target_expression: targetExprVal, field_name: 'val', value: instruction.val_payload })
                         });
                         await get().fetchMemory();
                     }
                     break;
-                case 'MATH_ADD':
-                    const nodeAddrAdd = state.stack[instruction.var_name];
-                    if (nodeAddrAdd) {
-                        const node = state.heap.find(n => n.address === nodeAddrAdd);
-                        if (node) {
-                            const currentVal = parseInt(node.data.val) || 0;
-                            const addingVal = parseInt(instruction.val_payload) || 0;
-                            const newVal = currentVal + addingVal;
-                            await fetch(`${API_URL}/api/memory/write`, {
-                                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ source_address: nodeAddrAdd, field_name: 'val', target_address: newVal })
-                            });
-                            await get().fetchMemory();
-                        }
-                    }
-                    break;
-                case 'COPY_VAL':
-                    const destAddr = state.stack[instruction.var_name];
-                    const srcDataAddr = state.stack[instruction.source_var || ""];
-                    if (destAddr && srcDataAddr) {
-                        const srcNode = state.heap.find(n => n.address === srcDataAddr);
-                        if (srcNode) {
-                            const valToCopy = srcNode.data.val;
-                            await fetch(`${API_URL}/api/memory/write`, {
-                                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ source_address: destAddr, field_name: 'val', target_address: valToCopy })
-                            });
-                            await get().fetchMemory();
-                        }
-                    }
-                    break;
+
                 case 'STEP_FORWARD':
-                    const currentAddr = state.stack[instruction.var_name];
-                    if (currentAddr) {
-                        const node = state.heap.find(n => n.address === currentAddr);
-                        if (node && instruction.field_name) {
-                            const nextAddr = node.data[instruction.field_name];
-                            if (nextAddr !== undefined) {
-                                const newStack = { ...state.stack };
-                                if (nextAddr === null) delete newStack[instruction.var_name];
-                                else newStack[instruction.var_name] = nextAddr;
-                                const newState = { ...state, stack: newStack };
-                                if (get().isSandboxMode) set({ sandboxMemoryState: newState });
-                                else set({ memoryState: newState });
-                            }
-                        }
+                    const stepVar = instruction.var_name;
+                    const stepField = instruction.field_name;
+                    if (stepVar && stepField) {
+                        const newExpression = `${stepVar}->${stepField}`;
+                        await get().setVariable(stepVar, newExpression);
+                        set(state => ({ codeHistory: [...state.codeHistory, `${stepVar} = ${newExpression};`] }));
                     }
                     break;
+
                 case 'SET_FIELD_NULL':
-                    const nodeAddrNull = state.stack[instruction.var_name];
-                    if (nodeAddrNull && instruction.field_name) {
-                        await fetch(`${API_URL}/api/memory/write`, {
+                    const targetExprNull = instruction.var_name;
+                    if (targetExprNull && instruction.field_name) {
+                        await fetch(`${API_URL}/api/memory/assign_pointer`, {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ source_address: nodeAddrNull, field_name: instruction.field_name, target_address: null })
+                            body: JSON.stringify({ target_expression: targetExprNull, field_name: instruction.field_name, source_expression: "NULL" })
                         });
                         await get().fetchMemory();
                     }
@@ -421,7 +332,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         await get().runAlgorithmStep(instruction);
     },
 
-    isConnectionNew: (sourceAddr: string, field: string, targetAddr: string) => {
+    isConnectionNew: (sourceAddr, field, targetAddr) => {
         const { isSandboxMode, initialSandboxState } = get();
         if (!isSandboxMode || !initialSandboxState) return false;
         const initialNode = initialSandboxState.heap.find(n => n.address === sourceAddr);
@@ -430,7 +341,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         return initialTarget !== targetAddr;
     },
 
-    isNodeNew: (address: string) => {
+    isNodeNew: (address) => {
         const { isSandboxMode, initialSandboxState } = get();
         if (!isSandboxMode || !initialSandboxState) return false;
         const existed = initialSandboxState.heap.some(n => n.address === address);
@@ -464,4 +375,5 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
             set({ currentStepIndex: nextIndex });
         }
     },
+
 }));

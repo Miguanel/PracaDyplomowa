@@ -1,14 +1,5 @@
-import type { AlgorithmInstruction } from "../store/memoryStore";
 
-export interface AlgorithmDef {
-  id: string;
-  title: string;
-  description: string;
-  codeLines: string[];
-  steps: AlgorithmInstruction[];
-}
-
-export const ALGORITHMS_DB: AlgorithmDef[] = [
+export const ALGORITHMS_DB = [
   // --- 1. WYSZUKIWANIE LINIOWE ---
   {
     id: "sll_find_val",
@@ -63,7 +54,7 @@ export const ALGORITHMS_DB: AlgorithmDef[] = [
       { group: "Faza 2: Przygotowanie nowego elementu", cmd: "ASSIGN_VAR", var_name: "curr", source_var: "w2", explanation: "Przyklejamy naklejkę 'curr' na drugi wagonik. To ZA NIM chcemy wpiąć nowość." },
       { group: "Faza 2: Przygotowanie nowego elementu", cmd: "ALLOC", var_name: "nowy", val_payload: { val: 25, x: 600, y: 350 }, explanation: "Przywozimy na tory nowy wagonik z numerem 25 (ustawiamy go poniżej luki)." },
 
-      { group: "Faza 3: Bezpieczne przepinanie wskaźników", cmd: "ASSIGN_VAR", var_name: "temp", source_var: "curr", field_name: "next", explanation: "WAŻNE: Zabezpieczamy resztę pociągu! Naklejamy 'temp' na wagon nr 3, żeby go nie zgubić po odpięciu." },
+      { group: "Faza 3: Bezpieczne przepinanie wskaźników", cmd: "ASSIGN_VAR", var_name: "temp", source_var: "curr->next", explanation: "WAŻNE: Zabezpieczamy resztę pociągu! Naklejamy 'temp' na wagon nr 3, żeby go nie zgubić po odpięciu." },
       { group: "Faza 3: Bezpieczne przepinanie wskaźników", cmd: "ASSIGN_FIELD", var_name: "nowy", field_name: "next", source_var: "temp", explanation: "Najpierw podpinamy NOWY wagon do zabezpieczonej reszty pociągu (nowy->temp)." },
       { group: "Faza 3: Bezpieczne przepinanie wskaźników", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "next", source_var: "nowy", explanation: "Na koniec przepinamy wagonik 'curr', by wskazywał na nowy. Pociąg znów jest cały!" }
     ]
@@ -86,7 +77,7 @@ export const ALGORITHMS_DB: AlgorithmDef[] = [
       { group: "Faza 1: Sytuacja awaryjna na torach", cmd: "ASSIGN_FIELD", var_name: "zepsuty", field_name: "next", source_var: "dobry", explanation: "Pociąg 1-2-3 jedzie na torach. Środkowy element uległ awarii." },
 
       { group: "Faza 2: Identyfikacja sąsiadów", cmd: "ASSIGN_VAR", var_name: "przed", source_var: "head", explanation: "Oznaczamy naklejką 'przed' wagonik, który stoi przed zepsutym." },
-      { group: "Faza 2: Identyfikacja sąsiadów", cmd: "ASSIGN_VAR", var_name: "za", source_var: "zepsuty", field_name: "next", explanation: "Oznaczamy naklejką 'za' wagonik, który stoi po zepsutym." },
+      { group: "Faza 2: Identyfikacja sąsiadów", cmd: "ASSIGN_VAR", var_name: "za", source_var: "zepsuty->next", explanation: "Oznaczamy naklejką 'za' wagonik, który stoi po zepsutym." },
 
       { group: "Faza 3: Mostkowanie i Sprzątanie", cmd: "ASSIGN_FIELD", var_name: "przed", field_name: "next", source_var: "za", explanation: "Budujemy ominięcie (most). Wagon przed zepsutym podpinamy bezpośrednio do wagonu za zepsutym." },
       { group: "Faza 3: Mostkowanie i Sprzątanie", cmd: "SET_FIELD_NULL", var_name: "zepsuty", field_name: "next", explanation: "Odpinamy stary sznurek od zepsutego wagonu, żeby niczego nie ciągnął." },
@@ -136,24 +127,26 @@ export const ALGORITHMS_DB: AlgorithmDef[] = [
     ]
   },
 
-  // --- 5. KOLEJKA (QUEUE ENQUEUE) ---
+    // --- 5. KOLEJKA (QUEUE ENQUEUE) ---
   {
     id: "queue_enqueue",
     title: "5. Kolejka: Ktoś dochodzi",
     description: "Kolejka w urzędzie (Pierwszy wchodzi, Pierwszy wychodzi). Jeśli przychodzi nowa osoba, zawsze staje na samym końcu (przy etykiecie 'tail').",
     codeLines: [
-      "Node* nowy = new Node(55);",
+      "Node* nowy = new Node(44);",
       "tail->next = nowy;",
       "tail = nowy;"
     ],
     steps: [
       { group: "Faza 1: Kolejka w okienku", cmd: "ALLOC", var_name: "head", val_payload: { val: 11, x: 100, y: 200 }, explanation: "Pierwsza osoba w urzędzie." },
-      { group: "Faza 1: Kolejka w okienku", cmd: "ALLOC", var_name: "tail", val_payload: { val: 22, x: 350, y: 200 }, explanation: "Druga osoba, która zamyka kolejkę (tail - ogon)." },
-      { group: "Faza 1: Kolejka w okienku", cmd: "ASSIGN_FIELD", var_name: "head", field_name: "next", source_var: "tail", explanation: "Kolejka ustawiona w rzędzie." },
+      { group: "Faza 1: Kolejka w okienku", cmd: "ALLOC", var_name: "n2", val_payload: { val: 22, x: 350, y: 200 }, explanation: "Druga osoba czeka w kolejce." },
+      { group: "Faza 1: Kolejka w okienku", cmd: "ASSIGN_FIELD", var_name: "head", field_name: "next", source_var: "n2", explanation: "11 -> 22." },
+      { group: "Faza 1: Kolejka w okienku", cmd: "ALLOC", var_name: "tail", val_payload: { val: 33, x: 600, y: 200 }, explanation: "Trzecia osoba zamykająca kolejkę (tail)." },
+      { group: "Faza 1: Kolejka w okienku", cmd: "ASSIGN_FIELD", var_name: "n2", field_name: "next", source_var: "tail", explanation: "Kolejka ustawiona: 11 -> 22 -> 33." },
 
-      { group: "Faza 2: Obsługa nowego klienta", cmd: "ALLOC", var_name: "nowy", val_payload: { val: 55, x: 600, y: 200 }, explanation: "Przychodzi nowy interesant z numerkiem 55." },
+      { group: "Faza 2: Obsługa nowego klienta", cmd: "ALLOC", var_name: "nowy", val_payload: { val: 44, x: 850, y: 200 }, explanation: "Przychodzi czwarty interesant z numerkiem 44." },
       { group: "Faza 2: Obsługa nowego klienta", cmd: "ASSIGN_FIELD", var_name: "tail", field_name: "next", source_var: "nowy", explanation: "Poprzednia ostatnia osoba (tail) musi wskazać strzałką na nowego, by stanął za nią." },
-      { group: "Faza 2: Obsługa nowego klienta", cmd: "ASSIGN_VAR", var_name: "tail", source_var: "nowy", explanation: "Zdejmujemy naklejkę 'tail' ze starego końca i przyklejamy ją na nową osobę. Teraz ona oficjalnie zamyka kolejkę." }
+      { group: "Faza 2: Obsługa nowego klienta", cmd: "ASSIGN_VAR", var_name: "tail", source_var: "nowy", explanation: "Zdejmujemy naklejkę 'tail' ze starego końca i przyklejamy ją na nową osobę. Teraz ona oficjalnie zamyka 4-osobową kolejkę." }
     ]
   },
 
@@ -193,10 +186,15 @@ export const ALGORITHMS_DB: AlgorithmDef[] = [
       "top = nowy;"
     ],
     steps: [
-      { group: "Faza 1: Sterta talerzy", cmd: "ALLOC", var_name: "top", val_payload: { val: 10, x: 400, y: 400 }, explanation: "Na stole leży jeden talerz (wartość 10). Ma on etykietę 'top', bo jest na samym szczycie." },
-      { group: "Faza 2: Dokładanie na szczyt", cmd: "ALLOC", var_name: "nowy", val_payload: { val: 99, x: 400, y: 150 }, explanation: "Bierzemy nowy talerz (99), który kładziemy WYŻEJ (mniejszy y) na stertę." },
-      { group: "Faza 2: Dokładanie na szczyt", cmd: "ASSIGN_FIELD", var_name: "nowy", field_name: "next", source_var: "top", explanation: "Nowy talerz wskazuje w dół, na stary szczyt stosu." },
-      { group: "Faza 3: Aktualizacja szczytu", cmd: "ASSIGN_VAR", var_name: "top", source_var: "nowy", explanation: "Przenosimy etykietę 'top' na nasz nowy talerz. Od teraz to on króluje na szczycie!" }
+      { group: "Faza 1: Sterta talerzy", cmd: "ALLOC", var_name: "t3", val_payload: { val: 10, x: 400, y: 550 }, explanation: "Najniższy talerz na stole (10)." },
+      { group: "Faza 1: Sterta talerzy", cmd: "ALLOC", var_name: "t2", val_payload: { val: 20, x: 400, y: 400 }, explanation: "Środkowy talerz (20)." },
+      { group: "Faza 1: Sterta talerzy", cmd: "ASSIGN_FIELD", var_name: "t2", field_name: "next", source_var: "t3", explanation: "20 leży na 10." },
+      { group: "Faza 1: Sterta talerzy", cmd: "ALLOC", var_name: "top", val_payload: { val: 30, x: 400, y: 250 }, explanation: "Obecny szczyt stosu (30)." },
+      { group: "Faza 1: Sterta talerzy", cmd: "ASSIGN_FIELD", var_name: "top", field_name: "next", source_var: "t2", explanation: "30 leży na 20. Stos składa się z 3 elementów." },
+
+      { group: "Faza 2: Dokładanie na szczyt", cmd: "ALLOC", var_name: "nowy", val_payload: { val: 99, x: 400, y: 100 }, explanation: "Bierzemy czwarty talerz (99), który kładziemy WYŻEJ na stertę." },
+      { group: "Faza 2: Dokładanie na szczyt", cmd: "ASSIGN_FIELD", var_name: "nowy", field_name: "next", source_var: "top", explanation: "Nowy talerz wskazuje w dół, na stary szczyt stosu (30)." },
+      { group: "Faza 3: Aktualizacja szczytu", cmd: "ASSIGN_VAR", var_name: "top", source_var: "nowy", explanation: "Przenosimy etykietę 'top' na nasz nowy talerz. Od teraz to on króluje na 4-elementowym stosie!" }
     ]
   },
 
@@ -211,53 +209,62 @@ export const ALGORITHMS_DB: AlgorithmDef[] = [
       "delete zdjety;"
     ],
     steps: [
-      { group: "Faza 1: Sterta talerzy", cmd: "ALLOC", var_name: "top", val_payload: { val: 99, x: 400, y: 150 }, explanation: "Górny talerz (99)." },
-      { group: "Faza 1: Sterta talerzy", cmd: "ALLOC", var_name: "drugi", val_payload: { val: 10, x: 400, y: 400 }, explanation: "Dolny talerz (10)." },
-      { group: "Faza 1: Sterta talerzy", cmd: "ASSIGN_FIELD", var_name: "top", field_name: "next", source_var: "drugi", explanation: "Górny leży na dolnym." },
+      { group: "Faza 1: Sterta talerzy", cmd: "ALLOC", var_name: "t4", val_payload: { val: 10, x: 400, y: 550 }, explanation: "Najniższy talerz (10)." },
+      { group: "Faza 1: Sterta talerzy", cmd: "ALLOC", var_name: "t3", val_payload: { val: 20, x: 400, y: 400 }, explanation: "Talerz (20)." },
+      { group: "Faza 1: Sterta talerzy", cmd: "ASSIGN_FIELD", var_name: "t3", field_name: "next", source_var: "t4", explanation: "20 na 10." },
+      { group: "Faza 1: Sterta talerzy", cmd: "ALLOC", var_name: "t2", val_payload: { val: 30, x: 400, y: 250 }, explanation: "Talerz (30)." },
+      { group: "Faza 1: Sterta talerzy", cmd: "ASSIGN_FIELD", var_name: "t2", field_name: "next", source_var: "t3", explanation: "30 na 20." },
+      { group: "Faza 1: Sterta talerzy", cmd: "ALLOC", var_name: "top", val_payload: { val: 99, x: 400, y: 100 }, explanation: "Szczyt stosu (99)." },
+      { group: "Faza 1: Sterta talerzy", cmd: "ASSIGN_FIELD", var_name: "top", field_name: "next", source_var: "t2", explanation: "Stos 4-elementowy gotowy." },
 
-      { group: "Faza 2: Operacja zdjęcia", cmd: "ASSIGN_VAR", var_name: "w_rece", source_var: "top", explanation: "Bierzemy w ręce górny talerz." },
-      { group: "Faza 2: Operacja zdjęcia", cmd: "STEP_FORWARD", var_name: "top", field_name: "next", explanation: "Szczytem stosu ('top') zostaje automatycznie talerz leżący niżej." },
+      { group: "Faza 2: Operacja zdjęcia", cmd: "ASSIGN_VAR", var_name: "w_rece", source_var: "top", explanation: "Bierzemy w ręce górny talerz (99)." },
+      { group: "Faza 2: Operacja zdjęcia", cmd: "STEP_FORWARD", var_name: "top", field_name: "next", explanation: "Szczytem stosu ('top') zostaje automatycznie talerz leżący niżej (30)." },
       { group: "Faza 3: Uprzątnięcie", cmd: "SET_FIELD_NULL", var_name: "w_rece", field_name: "next", explanation: "Odsuwamy wzięty talerz, pękają połączenia w dół." },
-      { group: "Faza 3: Uprzątnięcie", cmd: "FREE", var_name: "w_rece", explanation: "Używamy talerza (wyrzucamy z pamięci). Został tylko ten na dole." }
+      { group: "Faza 3: Uprzątnięcie", cmd: "FREE", var_name: "w_rece", explanation: "Używamy talerza (wyrzucamy z pamięci). Zostały 3 talerze." }
     ]
   },
 
   // --- 9. SZYBKI I WOLNY WSKAŹNIK ---
   {
     id: "tortoise_hare",
-    title: "9. Wyścig: Zając i Żółw",
-    description: "Bardzo mądry algorytm! Jak znaleźć środek pociągu, nie licząc wcześniej wagonów? Puszczamy Żółwia (1 krok na raz) i Zająca (2 kroki na raz). Gdy Zając dobiegnie do końca, Żółw będzie w połowie drogi!",
+    title: "9. Algorytm Żółwia i Zająca (Wykrywanie cykli)",
+    description: "Sprytny algorytm Floyda na szukanie zapętleń w grafie. Puszczamy Żółwia (robi 1 krok) i Zająca (robi 2 kroki). Jeśli wpadną na ten sam węzeł — mamy cykl!",
     codeLines: [
-      "Node* zolw = head; Node* zajac = head;",
-      "while (zajac != NULL && zajac->next != NULL) {",
-      "  zolw = zolw->next;",
-      "  zajac = zajac->next->next;",
+      "Node* slow = head;",
+      "Node* fast = head;",
+      "while (fast && fast->next) {",
+      "  slow = slow->next;",
+      "  fast = fast->next->next;",
+      "  if (slow == fast) return true;",
       "}"
     ],
     steps: [
-      // Tutaj używamy nieco gęstszego X (co 200px), żeby 5 węzłów zmieściło się ładnie na jednym ekranie
-      { group: "Faza 1: Budowa toru wyścigowego", cmd: "ALLOC", var_name: "head", val_payload: { val: 1, x: 50, y: 200 }, explanation: "Wagon 1." },
-      { group: "Faza 1: Budowa toru wyścigowego", cmd: "ALLOC", var_name: "w2", val_payload: { val: 2, x: 250, y: 200 }, explanation: "Wagon 2." },
-      { group: "Faza 1: Budowa toru wyścigowego", cmd: "ASSIGN_FIELD", var_name: "head", field_name: "next", source_var: "w2", explanation: "Łączymy." },
-      { group: "Faza 1: Budowa toru wyścigowego", cmd: "ALLOC", var_name: "w3", val_payload: { val: 3, x: 450, y: 200 }, explanation: "Wagon 3 (nasz sekretny środek)." },
-      { group: "Faza 1: Budowa toru wyścigowego", cmd: "ASSIGN_FIELD", var_name: "w2", field_name: "next", source_var: "w3", explanation: "Łączymy." },
-      { group: "Faza 1: Budowa toru wyścigowego", cmd: "ALLOC", var_name: "w4", val_payload: { val: 4, x: 650, y: 200 }, explanation: "Wagon 4." },
-      { group: "Faza 1: Budowa toru wyścigowego", cmd: "ASSIGN_FIELD", var_name: "w3", field_name: "next", source_var: "w4", explanation: "Łączymy." },
-      { group: "Faza 1: Budowa toru wyścigowego", cmd: "ALLOC", var_name: "w5", val_payload: { val: 5, x: 850, y: 200 }, explanation: "Wagon 5 (Koniec)." },
-      { group: "Faza 1: Budowa toru wyścigowego", cmd: "ASSIGN_FIELD", var_name: "w4", field_name: "next", source_var: "w5", explanation: "Tor z 5 wagonów gotowy." },
+      { group: "Faza 1: Tworzenie uwięzionej trasy", cmd: "ALLOC", var_name: "head", val_payload: { val: 1, x: 100, y: 200 }, explanation: "Zaczynamy." },
+      { group: "Faza 1: Tworzenie uwięzionej trasy", cmd: "ALLOC", var_name: "w2", val_payload: { val: 2, x: 300, y: 200 }, explanation: "Punkt 2." },
+      { group: "Faza 1: Tworzenie uwięzionej trasy", cmd: "ASSIGN_FIELD", var_name: "head", field_name: "next", source_var: "w2", explanation: "Link 1 -> 2." },
+      { group: "Faza 1: Tworzenie uwięzionej trasy", cmd: "ALLOC", var_name: "w3", val_payload: { val: 3, x: 500, y: 200 }, explanation: "Punkt 3." },
+      { group: "Faza 1: Tworzenie uwięzionej trasy", cmd: "ASSIGN_FIELD", var_name: "w2", field_name: "next", source_var: "w3", explanation: "Link 2 -> 3." },
+      { group: "Faza 1: Tworzenie uwięzionej trasy", cmd: "ALLOC", var_name: "w4", val_payload: { val: 4, x: 700, y: 200 }, explanation: "Punkt 4." },
+      { group: "Faza 1: Tworzenie uwięzionej trasy", cmd: "ASSIGN_FIELD", var_name: "w3", field_name: "next", source_var: "w4", explanation: "Link 3 -> 4." },
+      { group: "Faza 1: Tworzenie uwięzionej trasy", cmd: "ASSIGN_FIELD", var_name: "w4", field_name: "next", source_var: "w2", explanation: "CYKL! Zamiast donikąd, punkt 4 wskazuje z powrotem na 2. Trasa się zapętla." },
 
-      { group: "Faza 2: Zawodnicy na start", cmd: "ASSIGN_VAR", var_name: "zolw", source_var: "head", explanation: "Kładziemy naklejkę Żółwia na pierwszym wagonie." },
-      { group: "Faza 2: Zawodnicy na start", cmd: "ASSIGN_VAR", var_name: "zajac", source_var: "head", explanation: "Kładziemy naklejkę Zająca obok Żółwia. Wyścig czas zacząć!" },
+      { group: "Faza 2: Start zawodników", cmd: "ASSIGN_VAR", var_name: "zolw", source_var: "head", explanation: "Żółw staje na start." },
+      { group: "Faza 2: Start zawodników", cmd: "ASSIGN_VAR", var_name: "zajac", source_var: "head", explanation: "Zając także na starcie." },
 
-      { group: "Faza 3: Runda Pierwsza", cmd: "STEP_FORWARD", var_name: "zolw", field_name: "next", explanation: "Żółw idzie powoli: 1 krok do przodu (na wagon 2)." },
-      { group: "Faza 3: Runda Pierwsza", cmd: "STEP_FORWARD", var_name: "zajac", field_name: "next", explanation: "Zając bierze rozpęd: 1..." },
-      { group: "Faza 3: Runda Pierwsza", cmd: "STEP_FORWARD", var_name: "zajac", field_name: "next", explanation: "...i 2! Zając skoczył od razu na wagon 3." },
+      // RUNDA 1
+      { group: "Faza 3: Runda 1", cmd: "STEP_FORWARD", var_name: "zolw", field_name: "next", explanation: "Żółw przesuwa się powoli na w2 (jeden krok)." },
+      { group: "Faza 3: Runda 1", cmd: "STEP_FORWARD", var_name: "zajac", field_name: "next", explanation: "Zając pierwszy krok (na w2)..." },
+      { group: "Faza 3: Runda 1", cmd: "STEP_FORWARD", var_name: "zajac", field_name: "next", explanation: "...i drugi skok na w3! Rozpędza się." },
 
-      { group: "Faza 4: Runda Druga i Meta", cmd: "STEP_FORWARD", var_name: "zolw", field_name: "next", explanation: "Żółw człapie na wagon 3." },
-      { group: "Faza 4: Runda Druga i Meta", cmd: "STEP_FORWARD", var_name: "zajac", field_name: "next", explanation: "Zając pędzi: 1..." },
-      { group: "Faza 4: Runda Druga i Meta", cmd: "STEP_FORWARD", var_name: "zajac", field_name: "next", explanation: "...i 2. Zając dobiega do mety na ostatni wagon nr 5." },
+      // RUNDA 2
+      { group: "Faza 4: Runda 2", cmd: "STEP_FORWARD", var_name: "zolw", field_name: "next", explanation: "Żółw przesuwa się na w3." },
+      { group: "Faza 4: Runda 2", cmd: "STEP_FORWARD", var_name: "zajac", field_name: "next", explanation: "Zając skacze z w3 na w4..." },
+      { group: "Faza 4: Runda 2", cmd: "STEP_FORWARD", var_name: "zajac", field_name: "next", explanation: "...i ponieważ jest pętla, ląduje z powrotem na w2! Zaczął kręcić się w kółko." },
 
-      { group: "Faza 5: Wynik Magii", cmd: "ASSIGN_VAR", var_name: "srodek", source_var: "zolw", explanation: "Zając dotarł do końca. Sprawdzamy, gdzie jest w tym czasie żółw... Zatrzymaliśmy się dokładnie na środkowym wagonie nr 3! Magia matematyki." }
+      // RUNDA 3
+      { group: "Faza 5: Runda 3 (Kolizja)", cmd: "STEP_FORWARD", var_name: "zolw", field_name: "next", explanation: "Żółw niewzruszony idzie na w4." },
+      { group: "Faza 5: Runda 3 (Kolizja)", cmd: "STEP_FORWARD", var_name: "zajac", field_name: "next", explanation: "Zając pędzi z w2 na w3..." },
+      { group: "Faza 5: Runda 3 (Kolizja)", cmd: "STEP_FORWARD", var_name: "zajac", field_name: "next", explanation: "...i uderza w Żółwia na w4! Ponieważ znaleźli się na tym samym adresie pamięci, wiemy ze 100% pewnością, że lista ma cykl (zwracamy TRUE)." }
     ]
   },
 
@@ -417,38 +424,40 @@ export const ALGORITHMS_DB: AlgorithmDef[] = [
       "} else { curr = curr->next; }"
     ],
     steps: [
+      // POPRAWKA WIZUALNA: Zwiększono odstępy X o 250px dla każdego węzła, by zapobiec nakładaniu się.
       { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ALLOC", var_name: "head", val_payload: { val: 10, x: 50, y: 200 }, explanation: "Budujemy pociąg. Wagon 10." },
-      { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ALLOC", var_name: "w2", val_payload: { val: 20, x: 150, y: 200 }, explanation: "Wagon 20." },
+      { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ALLOC", var_name: "w2", val_payload: { val: 20, x: 300, y: 200 }, explanation: "Wagon 20." },
       { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ASSIGN_FIELD", var_name: "head", field_name: "next", source_var: "w2", explanation: "Link." },
-      { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ALLOC", var_name: "w3", val_payload: { val: 20, x: 250, y: 200 }, explanation: "Klon! Wagon 20." },
+      { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ALLOC", var_name: "w3", val_payload: { val: 20, x: 550, y: 200 }, explanation: "Klon! Wagon 20." },
       { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ASSIGN_FIELD", var_name: "w2", field_name: "next", source_var: "w3", explanation: "Link." },
-      { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ALLOC", var_name: "w4", val_payload: { val: 30, x: 350, y: 200 }, explanation: "Wagon 30." },
+      { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ALLOC", var_name: "w4", val_payload: { val: 30, x: 800, y: 200 }, explanation: "Wagon 30." },
       { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ASSIGN_FIELD", var_name: "w3", field_name: "next", source_var: "w4", explanation: "Link." },
-      { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ALLOC", var_name: "w5", val_payload: { val: 50, x: 450, y: 200 }, explanation: "Wagon 50." },
+      { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ALLOC", var_name: "w5", val_payload: { val: 50, x: 1050, y: 200 }, explanation: "Wagon 50." },
       { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ASSIGN_FIELD", var_name: "w4", field_name: "next", source_var: "w5", explanation: "Link." },
-      { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ALLOC", var_name: "w6", val_payload: { val: 50, x: 550, y: 200 }, explanation: "Klon! Wagon 50." },
+      { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ALLOC", var_name: "w6", val_payload: { val: 50, x: 1300, y: 200 }, explanation: "Klon! Wagon 50." },
       { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ASSIGN_FIELD", var_name: "w5", field_name: "next", source_var: "w6", explanation: "Link." },
-      { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ALLOC", var_name: "w7", val_payload: { val: 50, x: 650, y: 200 }, explanation: "Potrójny Klon! Wagon 50." },
+      { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ALLOC", var_name: "w7", val_payload: { val: 50, x: 1550, y: 200 }, explanation: "Potrójny Klon! Wagon 50." },
       { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ASSIGN_FIELD", var_name: "w6", field_name: "next", source_var: "w7", explanation: "Link." },
-      { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ALLOC", var_name: "w8", val_payload: { val: 60, x: 750, y: 200 }, explanation: "Wagon 60." },
+      { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ALLOC", var_name: "w8", val_payload: { val: 60, x: 1800, y: 200 }, explanation: "Wagon 60." },
       { group: "Faza 1: Rozbudowany pociąg klonów", cmd: "ASSIGN_FIELD", var_name: "w7", field_name: "next", source_var: "w8", explanation: "Pociąg: 10-20-20-30-50-50-50-60." },
 
+      // Fazy logiczne z zachowaniem wyrażeń C++ ("curr->next" itp.)
       { group: "Faza 2: Pierwszy duplikat (20)", cmd: "ASSIGN_VAR", var_name: "curr", source_var: "w2", explanation: "Rewizor 'curr' wchodzi do wagonu 20 (w2)." },
-      { group: "Faza 2: Pierwszy duplikat (20)", cmd: "ASSIGN_VAR", var_name: "temp", source_var: "curr", field_name: "next", explanation: "Zagląda do następnego. To też 20 (oznacza go jako temp)." },
-      { group: "Faza 2: Pierwszy duplikat (20)", cmd: "ASSIGN_VAR", var_name: "za_klonem", source_var: "temp", field_name: "next", explanation: "Patrzy, co jest za klonem (tam jest wagon 30)." },
+      { group: "Faza 2: Pierwszy duplikat (20)", cmd: "ASSIGN_VAR", var_name: "temp", source_var: "curr->next", explanation: "Zagląda do następnego. To też 20 (oznacza go jako temp)." },
+      { group: "Faza 2: Pierwszy duplikat (20)", cmd: "ASSIGN_VAR", var_name: "za_klonem", source_var: "temp->next", explanation: "Patrzy, co jest za klonem (tam jest wagon 30)." },
       { group: "Faza 2: Pierwszy duplikat (20)", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "next", source_var: "za_klonem", explanation: "Mostkujemy! 'curr' (20) łapie od razu za wagon 30, omijając klona." },
       { group: "Faza 2: Pierwszy duplikat (20)", cmd: "FREE", var_name: "temp", explanation: "Pierwszy klon 20 zniszczony. WAŻNE: Rewizor nie idzie dalej, tylko bada nową sytuację ze swojej pozycji!" },
 
       { group: "Faza 3: Przejście dalej", cmd: "STEP_FORWARD", var_name: "curr", field_name: "next", explanation: "Teraz za rewizorem jest 30 (różne), więc przechodzi na wagon 30." },
       { group: "Faza 3: Przejście dalej", cmd: "STEP_FORWARD", var_name: "curr", field_name: "next", explanation: "Przechodzi na wagon 50 (w5)." },
 
-      { group: "Faza 4: Pierwszy z 50-tek", cmd: "ASSIGN_VAR", var_name: "temp", source_var: "curr", field_name: "next", explanation: "Rewizor (w5) widzi przed sobą klona 50 (w6)." },
-      { group: "Faza 4: Pierwszy z 50-tek", cmd: "ASSIGN_VAR", var_name: "za_klonem", source_var: "temp", field_name: "next", explanation: "Za nim jest kolejny klon 50 (w7)." },
+      { group: "Faza 4: Pierwszy z 50-tek", cmd: "ASSIGN_VAR", var_name: "temp", source_var: "curr->next", explanation: "Rewizor (w5) widzi przed sobą klona 50 (w6)." },
+      { group: "Faza 4: Pierwszy z 50-tek", cmd: "ASSIGN_VAR", var_name: "za_klonem", source_var: "temp->next", explanation: "Za nim jest kolejny klon 50 (w7)." },
       { group: "Faza 4: Pierwszy z 50-tek", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "next", source_var: "za_klonem", explanation: "Mostkuje omijając w6." },
       { group: "Faza 4: Pierwszy z 50-tek", cmd: "FREE", var_name: "temp", explanation: "Niszczy w6. Rewizor nadal stoi w wagonie w5 (wartość 50)." },
 
-      { group: "Faza 5: Potrójny duplikat (magia algorytmu)", cmd: "ASSIGN_VAR", var_name: "temp", source_var: "curr", field_name: "next", explanation: "Rewizor ZNOWU ze swojego miejsca patrzy przed siebie. Widzi nowo podpięty wagon w7 (wartość 50). Znów klon!" },
-      { group: "Faza 5: Potrójny duplikat (magia algorytmu)", cmd: "ASSIGN_VAR", var_name: "za_klonem", source_var: "temp", field_name: "next", explanation: "Za nim jest wagon 60 (w8)." },
+      { group: "Faza 5: Potrójny duplikat (magia algorytmu)", cmd: "ASSIGN_VAR", var_name: "temp", source_var: "curr->next", explanation: "Rewizor ZNOWU ze swojego miejsca patrzy przed siebie. Widzi nowo podpięty wagon w7 (wartość 50). Znów klon!" },
+      { group: "Faza 5: Potrójny duplikat (magia algorytmu)", cmd: "ASSIGN_VAR", var_name: "za_klonem", source_var: "temp->next", explanation: "Za nim jest wagon 60 (w8)." },
       { group: "Faza 5: Potrójny duplikat (magia algorytmu)", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "next", source_var: "za_klonem", explanation: "Znów mostkuje, podpinając w5 prosto do 60." },
       { group: "Faza 5: Potrójny duplikat (magia algorytmu)", cmd: "FREE", var_name: "temp", explanation: "Niszczy ostatniego klona. Z potrójnego 50 zostało jedno. Pociąg jest czysty!" }
     ]
@@ -565,34 +574,8 @@ export const ALGORITHMS_DB: AlgorithmDef[] = [
       { group: "Faza 3: Eliminacja", cmd: "FREE", var_name: "ofiara", explanation: "Gracz 2 (ofiara) oficjalnie opuszcza grę (usunięty z pamięci). W kole zostają tylko 1 i 3." }
     ]
   },
-  // --- 6. JOSEPHUS PROBLEM ---
-  {
-    id: "josephus",
-    title: "16. Gra w Berka (Problem Józefa)",
-    description: "Grupa stoi w kółku (Karuzela). Wyliczamy: 'jeden, dwa, ODPADASZ'. Eliminujemy co drugą osobę, aż zostanie tylko jedna. Tu pokażemy pierwszą eliminację.",
-    codeLines: [
-      "Node* ofiara = curr->next;",
-      "curr->next = ofiara->next;",
-      "delete ofiara;"
-    ],
-    steps: [
-      { group: "Faza 1: Ludzie w kółku", cmd: "ALLOC", var_name: "g1", val_payload: { val: 1, x: 250, y: 150 }, explanation: "Gracz 1." },
-      { group: "Faza 1: Ludzie w kółku", cmd: "ALLOC", var_name: "g2", val_payload: { val: 2, x: 450, y: 150 }, explanation: "Gracz 2." },
-      { group: "Faza 1: Ludzie w kółku", cmd: "ASSIGN_FIELD", var_name: "g1", field_name: "next", source_var: "g2", explanation: "Złapani za ręce." },
-      { group: "Faza 1: Ludzie w kółku", cmd: "ALLOC", var_name: "g3", val_payload: { val: 3, x: 350, y: 350 }, explanation: "Gracz 3." },
-      { group: "Faza 1: Ludzie w kółku", cmd: "ASSIGN_FIELD", var_name: "g2", field_name: "next", source_var: "g3", explanation: "Złapani za ręce." },
-      { group: "Faza 1: Ludzie w kółku", cmd: "ASSIGN_FIELD", var_name: "g3", field_name: "next", source_var: "g1", explanation: "Kółko zamknięte. Gramy w berka!" },
 
-      { group: "Faza 2: Wyliczanka", cmd: "ASSIGN_VAR", var_name: "curr", source_var: "g1", explanation: "Gracz 1 krzyczy 'JEDEN! JESTEM BEZPIECZNY'. Wskazuje palcem na Gracz 2." },
-      { group: "Faza 2: Wyliczanka", cmd: "ASSIGN_VAR", var_name: "ofiara", source_var: "curr", field_name: "next", explanation: "Oznaczamy Gracza 2 naklejką 'ofiara'." },
-
-      { group: "Faza 3: Eliminacja z kółka", cmd: "ASSIGN_VAR", var_name: "za_ofiara", source_var: "ofiara", field_name: "next", explanation: "Sprawdzamy kto stoi za ofiarą (to Gracz 3)." },
-      { group: "Faza 3: Eliminacja z kółka", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "next", source_var: "za_ofiara", explanation: "Gracz 1 puszcza rękę ofiary i łapie za rękę Gracza 3. Kółko zacieśnia się nad głową ofiary." },
-      { group: "Faza 3: Eliminacja z kółka", cmd: "FREE", var_name: "ofiara", explanation: "Gracz 2 wyrzucony z gry (zwolniona pamięć). W grze zostają 1 i 3, trzymając się za ręce." }
-    ]
-  },
-
-  // --- 7. BST SEARCH ---
+  // --- 17. BST SEARCH ---
   {
     id: "bst_search",
     title: "17. Mapa Skarbów (Szukanie w drzewie BST)",
@@ -622,7 +605,7 @@ export const ALGORITHMS_DB: AlgorithmDef[] = [
     ]
   },
 
-  // --- 8. BST INSERT ---
+  // --- 18. BST INSERT ---
   {
     id: "bst_insert",
     title: "18. Sadzenie Jabłka (Wstawianie do Drzewa BST)",
@@ -650,10 +633,10 @@ export const ALGORITHMS_DB: AlgorithmDef[] = [
     ]
   },
 
-  // --- 9. DLL REVERSE ---
+// --- 19-a. DLL REVERSE Generalny Remont (Odwracanie Dwukierunkowe)---
   {
-    id: "dll_reverse",
-    title: "19. Generalny Remont (Odwracanie Dwukierunkowe)",
+    id: "dll_reverse_a",
+    title: "19-a. Generalny Remont (Odwracanie Dwukierunkowe)",
     description: "W pociągu, gdzie każdy wagon ma hak przedni i tylny, zamieniamy te haki miejscami. To, co patrzyło w przód, patrzy w tył, a to co w tył, w przód.",
     codeLines: [
       "Node* temp = curr->next;",
@@ -661,27 +644,53 @@ export const ALGORITHMS_DB: AlgorithmDef[] = [
       "curr->prev = temp;"
     ],
     steps: [
-      { group: "Faza 1: Pociąg 2-kierunkowy", cmd: "ALLOC", var_name: "w1", val_payload: { val: 10, x: 150, y: 200 }, explanation: "Pierwszy wagon." },
-      { group: "Faza 1: Pociąg 2-kierunkowy", cmd: "ALLOC", var_name: "w2", val_payload: { val: 20, x: 450, y: 200 }, explanation: "Drugi wagon." },
-      { group: "Faza 1: Pociąg 2-kierunkowy", cmd: "ASSIGN_FIELD", var_name: "w1", field_name: "next", source_var: "w2", explanation: "10 patrzy w przód na 20." },
-      { group: "Faza 1: Pociąg 2-kierunkowy", cmd: "ASSIGN_FIELD", var_name: "w2", field_name: "prev", source_var: "w1", explanation: "20 patrzy w tył na 10. Połączenie pancerne gotowe." },
+      // BUDOWA POCIĄGU Z 4 WAGONÓW (Odstępy co 250px)
+      { group: "Faza 1: Budowa pociągu", cmd: "ALLOC", var_name: "w1", val_payload: { val: 10, x: 100, y: 200 }, explanation: "Pierwszy wagon." },
+      { group: "Faza 1: Budowa pociągu", cmd: "ALLOC", var_name: "w2", val_payload: { val: 20, x: 350, y: 200 }, explanation: "Drugi wagon." },
+      { group: "Faza 1: Budowa pociągu", cmd: "ASSIGN_FIELD", var_name: "w1", field_name: "next", source_var: "w2", explanation: "10 patrzy w przód na 20." },
+      { group: "Faza 1: Budowa pociągu", cmd: "ASSIGN_FIELD", var_name: "w2", field_name: "prev", source_var: "w1", explanation: "20 patrzy w tył na 10." },
 
+      { group: "Faza 1: Budowa pociągu", cmd: "ALLOC", var_name: "w3", val_payload: { val: 30, x: 600, y: 200 }, explanation: "Trzeci wagon." },
+      { group: "Faza 1: Budowa pociągu", cmd: "ASSIGN_FIELD", var_name: "w2", field_name: "next", source_var: "w3", explanation: "20 patrzy w przód na 30." },
+      { group: "Faza 1: Budowa pociągu", cmd: "ASSIGN_FIELD", var_name: "w3", field_name: "prev", source_var: "w2", explanation: "30 patrzy w tył na 20." },
+
+      { group: "Faza 1: Budowa pociągu", cmd: "ALLOC", var_name: "w4", val_payload: { val: 40, x: 850, y: 200 }, explanation: "Czwarty wagon." },
+      { group: "Faza 1: Budowa pociągu", cmd: "ASSIGN_FIELD", var_name: "w3", field_name: "next", source_var: "w4", explanation: "30 patrzy w przód na 40." },
+      { group: "Faza 1: Budowa pociągu", cmd: "ASSIGN_FIELD", var_name: "w4", field_name: "prev", source_var: "w3", explanation: "40 patrzy w tył na 30. Połączenie pancerne całego pociągu jest gotowe." },
+
+      // OBRÓT 1. WAGONU
       { group: "Faza 2: Obrót 1. wagonu", cmd: "ASSIGN_VAR", var_name: "curr", source_var: "w1", explanation: "Wchodzimy do pierwszego wagonu (10)." },
-      { group: "Faza 2: Obrót 1. wagonu", cmd: "ASSIGN_VAR", var_name: "zapas", source_var: "curr", field_name: "next", explanation: "Bierzemy prawy hak do ręki (zapas)." },
-      { group: "Faza 2: Obrót 1. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "next", source_var: "curr", explanation: "Mechanik przekręca hak NEXT tak, aby działał jak PREV (na razie puści 20)." },
-      { group: "Faza 2: Obrót 1. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "prev", source_var: "zapas", explanation: "A hak PREV wpina w stary NEXT (czyli w wagon 20). 1. wagon obrócony fizycznie o 180 stopni!" },
+      { group: "Faza 2: Obrót 1. wagonu", cmd: "ASSIGN_VAR", var_name: "zapas", source_var: "curr->next", explanation: "Bierzemy prawy hak do ręki (zapas = węzeł 20)." },
+      { group: "Faza 2: Obrót 1. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "next", source_var: "curr->prev", explanation: "Mechanik przekręca hak NEXT tak, aby działał jak PREV (ponieważ to 1. wagon, hak wskaże w pustkę / NULL)." },
+      { group: "Faza 2: Obrót 1. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "prev", source_var: "zapas", explanation: "A hak PREV wpina w stary NEXT (czyli w wagon 20). Pierwszy wagon obrócony fizycznie o 180 stopni!" },
 
-      { group: "Faza 3: Obrót 2. wagonu", cmd: "ASSIGN_VAR", var_name: "curr", source_var: "w2", explanation: "Idziemy do drugiego wagonu (20)." },
-      { group: "Faza 3: Obrót 2. wagonu", cmd: "ASSIGN_VAR", var_name: "zapas", source_var: "curr", field_name: "next", explanation: "Łapiemy jego prawy hak do ręki (zapas to pustka, bo to koniec pociągu)." },
-      { group: "Faza 3: Obrót 2. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "next", source_var: "curr", explanation: "Przepinamy NEXT na to gdzie patrzył PREV (czyli wstecz na 10)." },
-      { group: "Faza 3: Obrót 2. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "prev", source_var: "zapas", explanation: "Przepinamy PREV w pustkę. Drugi wagon również obrócony! Pociąg jedzie w lewo." }
+      // OBRÓT 2. WAGONU
+      { group: "Faza 3: Obrót 2. wagonu", cmd: "ASSIGN_VAR", var_name: "curr", source_var: "w2", explanation: "Przechodzimy do drugiego wagonu (20)." },
+      { group: "Faza 3: Obrót 2. wagonu", cmd: "ASSIGN_VAR", var_name: "zapas", source_var: "curr->next", explanation: "Łapiemy prawy hak do ręki (zapas = węzeł 30)." },
+      { group: "Faza 3: Obrót 2. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "next", source_var: "curr->prev", explanation: "Przepinamy NEXT na to, gdzie wcześniej patrzył PREV (czyli wstecz na 10)." },
+      { group: "Faza 3: Obrót 2. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "prev", source_var: "zapas", explanation: "Przepinamy PREV na dawny NEXT (czyli na 30). Drugi wagon obrócony!" },
+
+      // OBRÓT 3. WAGONU
+      { group: "Faza 4: Obrót 3. wagonu", cmd: "ASSIGN_VAR", var_name: "curr", source_var: "w3", explanation: "Przechodzimy do trzeciego wagonu (30)." },
+      { group: "Faza 4: Obrót 3. wagonu", cmd: "ASSIGN_VAR", var_name: "zapas", source_var: "curr->next", explanation: "Łapiemy prawy hak do ręki (zapas = węzeł 40)." },
+      { group: "Faza 4: Obrót 3. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "next", source_var: "curr->prev", explanation: "Przepinamy NEXT wstecz na 20." },
+      { group: "Faza 4: Obrót 3. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "prev", source_var: "zapas", explanation: "Przepinamy PREV w przód na 40. Trzeci wagon gotowy!" },
+
+      // OBRÓT 4. WAGONU
+      { group: "Faza 5: Obrót 4. wagonu", cmd: "ASSIGN_VAR", var_name: "curr", source_var: "w4", explanation: "Idziemy do czwartego, ostatniego wagonu (40)." },
+      { group: "Faza 5: Obrót 4. wagonu", cmd: "ASSIGN_VAR", var_name: "zapas", source_var: "curr->next", explanation: "Łapiemy prawy hak do ręki (zapas to pustka / NULL, bo to koniec pociągu)." },
+      { group: "Faza 5: Obrót 4. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "next", source_var: "curr->prev", explanation: "Przepinamy NEXT wstecz na 30." },
+      { group: "Faza 5: Obrót 4. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "prev", source_var: "zapas", explanation: "Przepinamy PREV w pustkę. Ostatni wagon obrócony!" },
+
+      // FINAŁ (HEAD)
+      { group: "Faza 6: Zakończenie", cmd: "ASSIGN_VAR", var_name: "head", source_var: "curr", explanation: "Manewr zakończony! Pociąg w całości zmienił kierunek jazdy. Nasz obecny wagon (40) staje się teraz nowym początkiem (head) odwróconej listy." }
     ]
   },
 
-  // --- 10. VALUE SWAP (BUBBLE) ---
+  // --- 19-b dll_reverse_b  Generalny Remont (Odwracanie Dwukierunkowe)---
   {
-    id: "dll_reverse",
-    title: "19. Generalny Remont (Odwracanie Dwukierunkowe)",
+    id: "dll_reverse_b",
+    title: "19-b. Generalny Remont (Odwracanie Dwukierunkowe)",
     description: "Odwracamy pociąg dwukierunkowy. Oznacza to fizyczną zamianę miejsc prawego i lewego haka w każdym wagonie. Utrzymujemy wagony w linii poziomej, zmienia się tylko kierunek strzałek.",
     codeLines: [
       "Node* temp = curr->next;",
@@ -689,21 +698,305 @@ export const ALGORITHMS_DB: AlgorithmDef[] = [
       "curr->prev = temp;"
     ],
     steps: [
-      // Ważne: ustawiamy Y na identyczne (200), X na równomierne, żeby wyglądało jak rzepik
-      { group: "Faza 1: Pociąg patrzy w prawo", cmd: "ALLOC", var_name: "w1", val_payload: { val: 10, x: 100, y: 200 }, explanation: "Pierwszy wagon (Lewy)." },
-      { group: "Faza 1: Pociąg patrzy w prawo", cmd: "ALLOC", var_name: "w2", val_payload: { val: 20, x: 400, y: 200 }, explanation: "Drugi wagon (Prawy)." },
-      { group: "Faza 1: Pociąg patrzy w prawo", cmd: "ASSIGN_FIELD", var_name: "w1", field_name: "next", source_var: "w2", explanation: "Wagon lewy łapie prawego (10->20)." },
-      { group: "Faza 1: Pociąg patrzy w prawo", cmd: "ASSIGN_FIELD", var_name: "w2", field_name: "prev", source_var: "w1", explanation: "Wagon prawy odpowiada uściskiem z tyłu (20->10)." },
+      // BUDOWA POCIĄGU Z 4 WAGONÓW
+      { group: "Faza 1: Budowa pociągu", cmd: "ALLOC", var_name: "w1", val_payload: { val: 10, x: 100, y: 200 }, explanation: "Pierwszy wagon (Lewy)." },
+      { group: "Faza 1: Budowa pociągu", cmd: "ALLOC", var_name: "w2", val_payload: { val: 20, x: 350, y: 200 }, explanation: "Drugi wagon." },
+      { group: "Faza 1: Budowa pociągu", cmd: "ASSIGN_FIELD", var_name: "w1", field_name: "next", source_var: "w2", explanation: "10 patrzy w przód na 20." },
+      { group: "Faza 1: Budowa pociągu", cmd: "ASSIGN_FIELD", var_name: "w2", field_name: "prev", source_var: "w1", explanation: "20 patrzy w tył na 10." },
 
+      { group: "Faza 1: Budowa pociągu", cmd: "ALLOC", var_name: "w3", val_payload: { val: 30, x: 600, y: 200 }, explanation: "Trzeci wagon." },
+      { group: "Faza 1: Budowa pociągu", cmd: "ASSIGN_FIELD", var_name: "w2", field_name: "next", source_var: "w3", explanation: "20 patrzy w przód na 30." },
+      { group: "Faza 1: Budowa pociągu", cmd: "ASSIGN_FIELD", var_name: "w3", field_name: "prev", source_var: "w2", explanation: "30 patrzy w tył na 20." },
+
+      { group: "Faza 1: Budowa pociągu", cmd: "ALLOC", var_name: "w4", val_payload: { val: 40, x: 850, y: 200 }, explanation: "Czwarty wagon (Prawy)." },
+      { group: "Faza 1: Budowa pociągu", cmd: "ASSIGN_FIELD", var_name: "w3", field_name: "next", source_var: "w4", explanation: "30 patrzy w przód na 40." },
+      { group: "Faza 1: Budowa pociągu", cmd: "ASSIGN_FIELD", var_name: "w4", field_name: "prev", source_var: "w3", explanation: "40 patrzy w tył na 30. Pociąg gotowy." },
+
+      // OBRÓT 1. WAGONU
       { group: "Faza 2: Obrót 1. wagonu", cmd: "ASSIGN_VAR", var_name: "curr", source_var: "w1", explanation: "Wchodzimy do pierwszego wagonu (10)." },
-      { group: "Faza 2: Obrót 1. wagonu", cmd: "ASSIGN_VAR", var_name: "prawyHak", source_var: "w2", explanation: "Zdejmujemy jego prawy hak i trzymamy go w ręce ('prawyHak' wskazuje na w2)." },
-      { group: "Faza 2: Obrót 1. wagonu", cmd: "SET_FIELD_NULL", var_name: "curr", field_name: "next", explanation: "W1 nie ma przed sobą nic (zamieniony w prawą krawędź)." },
-      { group: "Faza 2: Obrót 1. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "prev", source_var: "prawyHak", explanation: "Wpinamy hak w2 z powrotem, ale z lewej strony (prev). Wagon 1. obrócony o 180 stopni!" },
+      { group: "Faza 2: Obrót 1. wagonu", cmd: "ASSIGN_VAR", var_name: "zapas", source_var: "curr->next", explanation: "Zdejmujemy prawy hak i trzymamy go w ręce (zapas)." },
+      { group: "Faza 2: Obrót 1. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "next", source_var: "curr->prev", explanation: "W1 nie ma przed sobą nic (zamieniony w prawą krawędź)." },
+      { group: "Faza 2: Obrót 1. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "prev", source_var: "zapas", explanation: "Wpinamy stary prawy hak z lewej strony (prev). Wagon 1. obrócony!" },
 
+      // OBRÓT 2. WAGONU
       { group: "Faza 3: Obrót 2. wagonu", cmd: "ASSIGN_VAR", var_name: "curr", source_var: "w2", explanation: "Przechodzimy do drugiego wagonu (20)." },
-      { group: "Faza 3: Obrót 2. wagonu", cmd: "ASSIGN_VAR", var_name: "lewyHak", source_var: "w1", explanation: "Zdejmujemy jego stary lewy hak (wskazujący na w1)." },
-      { group: "Faza 3: Obrót 2. wagonu", cmd: "SET_FIELD_NULL", var_name: "curr", field_name: "prev", explanation: "W2 nie ma już nic za sobą (staje się lewą krawędzią)." },
-      { group: "Faza 3: Obrót 2. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "next", source_var: "lewyHak", explanation: "Wpinamy hak w1 z przodu (next). Pociąg fizycznie jedzie w drugą stronę!" }
+      { group: "Faza 3: Obrót 2. wagonu", cmd: "ASSIGN_VAR", var_name: "zapas", source_var: "curr->next", explanation: "Łapiemy prawy hak do ręki." },
+      { group: "Faza 3: Obrót 2. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "next", source_var: "curr->prev", explanation: "Przepinamy NEXT na lewą stronę." },
+      { group: "Faza 3: Obrót 2. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "prev", source_var: "zapas", explanation: "Przepinamy PREV na prawą stronę. Drugi wagon obrócony!" },
+
+      // OBRÓT 3. WAGONU
+      { group: "Faza 4: Obrót 3. wagonu", cmd: "ASSIGN_VAR", var_name: "curr", source_var: "w3", explanation: "Przechodzimy do trzeciego wagonu (30)." },
+      { group: "Faza 4: Obrót 3. wagonu", cmd: "ASSIGN_VAR", var_name: "zapas", source_var: "curr->next", explanation: "Łapiemy prawy hak do ręki." },
+      { group: "Faza 4: Obrót 3. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "next", source_var: "curr->prev", explanation: "Przepinamy NEXT wstecz." },
+      { group: "Faza 4: Obrót 3. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "prev", source_var: "zapas", explanation: "Przepinamy PREV w przód. Trzeci wagon gotowy!" },
+
+      // OBRÓT 4. WAGONU
+      { group: "Faza 5: Obrót 4. wagonu", cmd: "ASSIGN_VAR", var_name: "curr", source_var: "w4", explanation: "Idziemy do czwartego wagonu (40)." },
+      { group: "Faza 5: Obrót 4. wagonu", cmd: "ASSIGN_VAR", var_name: "zapas", source_var: "curr->next", explanation: "Łapiemy prawy hak do ręki (zapas to pustka / NULL)." },
+      { group: "Faza 5: Obrót 4. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "next", source_var: "curr->prev", explanation: "Przepinamy NEXT na lewą stronę." },
+      { group: "Faza 5: Obrót 4. wagonu", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "prev", source_var: "zapas", explanation: "Przepinamy PREV w pustkę. Ostatni wagon obrócony!" },
+
+      // FINAŁ
+      { group: "Faza 6: Zakończenie", cmd: "ASSIGN_VAR", var_name: "head", source_var: "curr", explanation: "Manewr zakończony! Oznaczamy czwarty wagon jako nowy początek listy (head)." }
+    ]
+  },
+
+  // --- 20. SCENARIUSZ DYDAKTYCZNY: ZAAWANSOWANE USUWANIE (5 WĘZŁÓW) ---
+  {
+    id: "edu_scenario_delete_advanced",
+    title: "20. Scenariusz: Usuwanie ze środka (Lekcja)",
+    description: "Zaawansowany algorytm pokazowy dla 5 węzłów. Uczy, jak bezpiecznie usunąć element 99 ze środka łańcucha, nie przerywając połączenia między resztą wagonów.",
+    codeLines: [
+      "Node* cel = head->next->next; // Element nr 3 (99)",
+      "Node* przed = head->next;    // Element nr 2 (20)",
+      "przed->next = cel->next;    // Mostkowanie: 20 -> 40",
+      "delete cel;                 // Usunięcie 99"
+    ],
+    steps: [
+      // Faza 1: Budowa długiego łańcucha (10 -> 20 -> 99 -> 40 -> 50)
+      {
+        group: "Faza 1: Budowa układu (10-20-99-40-50)",
+        cmd: "ALLOC",
+        var_name: "head",
+        val_payload: { val: 10, x: 50, y: 150 },
+        explanation: "Początek lekcji: Tworzymy startowy węzeł listy (10) z naklejką 'head'."
+      },
+      {
+        group: "Faza 1: Budowa układu (10-20-99-40-50)",
+        cmd: "ALLOC",
+        var_name: "n2",
+        val_payload: { val: 20, x: 250, y: 150 },
+        explanation: "Tworzymy drugi węzeł (20)."
+      },
+      {
+        group: "Faza 1: Budowa układu (10-20-99-40-50)",
+        cmd: "ASSIGN_FIELD",
+        var_name: "head",
+        field_name: "next",
+        source_var: "n2",
+        explanation: "Łączymy: 10 -> 20."
+      },
+      {
+        group: "Faza 1: Budowa układu (10-20-99-40-50)",
+        cmd: "ALLOC",
+        var_name: "target",
+        val_payload: { val: 99, x: 450, y: 150 },
+        explanation: "Tworzymy trzeci węzeł (99). To jest nasz CEL do usunięcia. Ustawiamy go w samym środku."
+      },
+      {
+        group: "Faza 1: Budowa układu (10-20-99-40-50)",
+        cmd: "ASSIGN_FIELD",
+        var_name: "n2",
+        field_name: "next",
+        source_var: "target",
+        explanation: "Łączymy: 20 -> 99."
+      },
+      {
+        group: "Faza 1: Budowa układu (10-20-99-40-50)",
+        cmd: "ALLOC",
+        var_name: "n4",
+        val_payload: { val: 40, x: 650, y: 150 },
+        explanation: "Tworzymy czwarty węzeł (40), który stoi za naszym celem."
+      },
+      {
+        group: "Faza 1: Budowa układu (10-20-99-40-50)",
+        cmd: "ASSIGN_FIELD",
+        var_name: "target",
+        field_name: "next",
+        source_var: "n4",
+        explanation: "Łączymy cel z resztą: 99 -> 40."
+      },
+      {
+        group: "Faza 1: Budowa układu (10-20-99-40-50)",
+        cmd: "ALLOC",
+        var_name: "tail",
+        val_payload: { val: 50, x: 850, y: 150 },
+        explanation: "Tworzymy ostatni węzeł (50) z naklejką 'tail'."
+      },
+      {
+        group: "Faza 1: Budowa układu (10-20-99-40-50)",
+        cmd: "ASSIGN_FIELD",
+        var_name: "n4",
+        field_name: "next",
+        source_var: "tail",
+        explanation: "Mamy gotowy łańcuch 5-elementowy: 10 -> 20 -> 99 -> 40 -> 50."
+      },
+
+      // Faza 2: Synergia i lokalizacja danych
+      {
+        group: "Faza 2: Synergia i lokalizacja danych",
+        cmd: "ASSIGN_VAR",
+        var_name: "cel",
+        source_var: "target",
+        explanation: "KROK KLUCZOWY: Lokalizujemy cel. Przypinamy naklejkę 'cel' do węzła 99, aby mieć do niego bezpośredni dostęp w pamięci."
+      },
+
+      // Faza 3: Mostkowanie (Omijanie)
+      {
+        group: "Faza 3: Mostkowanie (Omijanie)",
+        cmd: "ASSIGN_VAR",
+        var_name: "przed",
+        source_var: "n2",
+        explanation: "Lokalizujemy sąsiada 'przed'. To węzeł 20, który stoi bezpośrednio przed naszym celem."
+      },
+      {
+        group: "Faza 3: Mostkowanie (Omijanie)",
+        cmd: "ASSIGN_VAR",
+        var_name: "za",
+        source_var: "cel->next", // ZMIANA TUTAJ
+        explanation: "Lokalizujemy sąsiada 'za'. Przypinamy naklejkę 'za' do węzła za usuwanym elementem (czyli 'cel->next'). To jest bezpieczna reszta pociągu, którą musimy uratować."
+      },
+      {
+        group: "Faza 3: Mostkowanie (Omijanie)",
+        cmd: "ASSIGN_FIELD",
+        var_name: "przed",
+        field_name: "next",
+        source_var: "za",
+        explanation: "MOMENT PRAWDY (Mostkowanie): Węzeł 'przed' (20) puszcza uścisk celu i łapie bezpośrednio węzeł 'za' (40). Zauważ, że cel (99) wciąż wisi w pamięci, ale łańcuch został ominięty."
+      },
+
+      // Faza 4: Czyszczenie pamięci
+      {
+        group: "Faza 4: Czyszczenie pamięci",
+        cmd: "SET_FIELD_NULL",
+        var_name: "cel",
+        field_name: "next",
+        explanation: "Odpinamy ostatnią strzałkę od usuwanego węzła (99 -> NULL), aby go całkowicie odizolować."
+      },
+      {
+        group: "Faza 4: Czyszczenie pamięci",
+        cmd: "FREE",
+        var_name: "cel",
+        explanation: "FINAŁ: Usuwamy węzeł 99 z pamięci (free). Dzięki wcześniejszemu mostkowaniu, pociąg pozostał cały i bezpiecznie jedzie dalej: 10 -> 20 -> 40 -> 50."
+      }
+    ]
+  },
+  // --- 21. SHOWCASE: WYCIEK PAMIĘCI (SLIDES: PROBLEM & SANDBOX) ---
+  {
+    id: "edu_showcase_memory_leak",
+    title: "21. DEMO: Zjawisko Wycieku Pamięci (Memory Leak)",
+    description: "Algorytm pokazowy dla Komisji. Ilustruje klasyczny błąd polegający na nadpisaniu wskaźnika bez uprzedniego użycia komendy 'free', co skutkuje bezpowrotną utratą dostępu do fragmentu pamięci RAM.",
+    codeLines: [
+      "Node* head = new Node(10);",
+      "head->next = new Node(20);",
+      "head->next->next = new Node(30);",
+      "// BŁĄD LOGICZNY PONIŻEJ:",
+      "head->next = head->next->next;"
+    ],
+    steps: [
+      { group: "Faza 1: Prawidłowy łańcuch", cmd: "ALLOC", var_name: "head", val_payload: { val: 10, x: 100, y: 200 }, explanation: "Inicjalizacja środowiska testowego. Alokujemy pierwszy blok." },
+      { group: "Faza 1: Prawidłowy łańcuch", cmd: "ALLOC", var_name: "w2", val_payload: { val: 20, x: 400, y: 200 }, explanation: "Alokujemy środkowy blok (Zaraz ulegnie wyciekowi)." },
+      { group: "Faza 1: Prawidłowy łańcuch", cmd: "ASSIGN_FIELD", var_name: "head", field_name: "next", source_var: "w2", explanation: "Łączymy: 10 -> 20." },
+      { group: "Faza 1: Prawidłowy łańcuch", cmd: "ALLOC", var_name: "w3", val_payload: { val: 30, x: 700, y: 200 }, explanation: "Alokujemy końcowy blok." },
+      { group: "Faza 1: Prawidłowy łańcuch", cmd: "ASSIGN_FIELD", var_name: "w2", field_name: "next", source_var: "w3", explanation: "Łańcuch jest spójny: 10 -> 20 -> 30. Wszystkie węzły są osiągalne z poziomu stosu (zmiennej 'head')." },
+
+      { group: "Faza 2: Błędne przepięcie", cmd: "ASSIGN_VAR", var_name: "cel", source_var: "w3", explanation: "Zmienna 'cel' identyfikuje węzeł 30." },
+      { group: "Faza 2: Błędne przepięcie", cmd: "ASSIGN_FIELD", var_name: "head", field_name: "next", source_var: "cel", explanation: "UWAGA! Mostkujemy węzeł 10 bezpośrednio z 30, zapominając o instrukcji 'free' dla węzła 20." },
+
+      { group: "Faza 3: Skutek (Memory Leak)", cmd: "SET_FIELD_NULL", var_name: "w2", field_name: "next", explanation: "Zerwanie starego dowiązania w dół. Węzeł 20 zostaje sam." },
+      { group: "Faza 3: Skutek (Memory Leak)", cmd: "ASSIGN_VAR", var_name: "UWAGA", source_var: "w2", explanation: "Zjawisko Wycieku Pamięci (Memory Leak): Węzeł 20 wciąż zajmuje fizyczne miejsce na Stercie, ale w normalnym programie nie mamy już do niego żadnego wskaźnika. System EduAlgo demaskuje ten błąd wizualnie." }
+    ]
+  },
+  // --- 22. SHOWCASE: ROTACJA DRZEWA (SLIDES: REACT FLOW & FRONTEND) ---
+  {
+    id: "edu_showcase_tree_rotation",
+    title: "22. DEMO: Prawa Rotacja Drzewa (Balansowanie)",
+    description: "Zaawansowana manipulacja wskaźnikami 2D. Algorytm odwraca relację rodzic-dziecko (węzeł 30 staje się nowym korzeniem, a 50 jego prawym dzieckiem). Demonstracja wydajności silnika renderującego grafy.",
+    codeLines: [
+      "Node* pivot = root->left;",
+      "root->left = pivot->right;",
+      "pivot->right = root;",
+      "root = pivot;"
+    ],
+    steps: [
+      { group: "Faza 1: Niezbalansowane Drzewo", cmd: "ALLOC", var_name: "root", val_payload: { val: 50, x: 500, y: 100 }, explanation: "Stary korzeń (50)." },
+      { group: "Faza 1: Niezbalansowane Drzewo", cmd: "ALLOC", var_name: "pivot", val_payload: { val: 30, x: 300, y: 250 }, explanation: "Lewe dziecko (30) - nasz punkt obrotu." },
+      { group: "Faza 1: Niezbalansowane Drzewo", cmd: "ASSIGN_FIELD", var_name: "root", field_name: "prev", source_var: "pivot", explanation: "50 wskazuje na 30." },
+      { group: "Faza 1: Niezbalansowane Drzewo", cmd: "ALLOC", var_name: "T2", val_payload: { val: 40, x: 400, y: 400 }, explanation: "Prawe poddrzewo węzła 30 (Wartość 40)." },
+      { group: "Faza 1: Niezbalansowane Drzewo", cmd: "ASSIGN_FIELD", var_name: "pivot", field_name: "next", source_var: "T2", explanation: "Drzewo początkowe zbudowane. Zaczynamy manewr rotacji w prawo." },
+
+      { group: "Faza 2: Przekazanie sieroty (T2)", cmd: "ASSIGN_FIELD", var_name: "root", field_name: "prev", source_var: "T2", explanation: "Krok 1: Korzeń 50 przejmuje prawe poddrzewo (40) pivota i czyni je swoim lewym dzieckiem." },
+
+      { group: "Faza 3: Zmiana hierarchii", cmd: "ASSIGN_FIELD", var_name: "pivot", field_name: "next", source_var: "root", explanation: "Krok 2: Pivot (30) wynosi się do góry, a stary korzeń (50) staje się teraz jego prawym dzieckiem! Zwróć uwagę na dynamiczną zmianę krawędzi." },
+
+      { group: "Faza 4: Nowy Korzeń", cmd: "ASSIGN_VAR", var_name: "root", source_var: "pivot", explanation: "Krok 3: Przesuwamy etykietę globalnego korzenia. Węzeł 30 oficjalnie króluje na szczycie struktury." }
+    ]
+  },
+  // --- 23. SHOWCASE: DANGLING POINTER (SLIDES: BACKEND SIMULATOR) ---
+  {
+    id: "edu_showcase_dangling",
+    title: "23. DEMO: Wiszący Wskaźnik (Dangling Pointer)",
+    description: "Pokazuje brutalną prawdę o C/C++: dealokacja pamięci nie czyści automatycznie wskaźników na Stosie. Tworzy to 'wiszący wskaźnik', który grozi błędem Segmentation Fault.",
+    codeLines: [
+      "Node* temp = new Node(99);",
+      "Node* hacker = temp;",
+      "delete temp; // Pamięć usunięta",
+      "// Zmienna 'hacker' nadal wskazuje na stary adres!"
+    ],
+    steps: [
+      { group: "Faza 1: Alokacja", cmd: "ALLOC", var_name: "temp", val_payload: { val: 99, x: 400, y: 250 }, explanation: "Rezerwujemy miejsce w wirtualnej pamięci dla wartości 99." },
+      { group: "Faza 1: Alokacja", cmd: "ASSIGN_VAR", var_name: "hacker", source_var: "temp", explanation: "Tworzymy drugi wskaźnik na ten sam adres. Obie zmienne patrzą na ten sam blok pamięci." },
+
+      { group: "Faza 2: Brutalna dealokacja", cmd: "FREE", var_name: "temp", explanation: "Zwalniamy pamięć spod zmiennej 'temp' (wywołanie free na serwerze Python). Węzeł znika ze Sterty." },
+
+      { group: "Faza 3: Rezultat", cmd: "ASSIGN_VAR", var_name: "UWAGA", source_var: "hacker", explanation: "Spójrz do Prawego Panelu (Tabela Stosu)! Zmienna 'hacker' NADAL posiada adres w pamięci (nie jest NULL). Gdybyśmy teraz spróbowali wywołać 'hacker->val', silnik backendu zwróci krytyczny błąd." }
+    ]
+  },
+  // --- 24. SHOWCASE: BUBBLE SORT (SLIDES: REACT FLOW / FRONTEND SHOWCASE) ---
+// --- 24. SHOWCASE: BUBBLE SORT (POPRAWIONY I KULOODPORNY) ---
+  {
+    id: "edu_showcase_bubble_sort",
+    title: "24. DEMO: Sortowanie Bąbelkowe (Taniec Wskaźników)",
+    description: "Spektakularna demonstracja zamiany węzłów. Zamiast podmieniać same liczby, fizycznie przepinamy wskaźniki, aby wypchnąć największą wartość na koniec. Ten algorytm to wizualny dowód na płynność trasowania krawędzi (Edges) w systemie.",
+    codeLines: [
+      "if (curr->val > nxt->val) {",
+      "  prev->next = nxt;       // Krok 1",
+      "  curr->next = nxt->next; // Krok 2",
+      "  nxt->next = curr;       // Krok 3",
+      "}"
+    ],
+    steps: [
+      // Faza 1: Inicjalizacja najgorszego przypadku (Odwrotna kolejność)
+      // Nadajemy twarde nazwy w1 (30), w2 (20), w3 (10), których będziemy się trzymać pod spodem.
+      { group: "Faza 1: Rozstawienie (30-20-10)", cmd: "ALLOC", var_name: "w1", val_payload: { val: 30, x: 100, y: 200 }, explanation: "Rozpoczynamy od listy w najgorszym możliwym ułożeniu. Pierwszy węzeł to 30." },
+      { group: "Faza 1: Rozstawienie (30-20-10)", cmd: "ALLOC", var_name: "w2", val_payload: { val: 20, x: 350, y: 200 }, explanation: "Drugi węzeł to 20." },
+      { group: "Faza 1: Rozstawienie (30-20-10)", cmd: "ASSIGN_FIELD", var_name: "w1", field_name: "next", source_var: "w2", explanation: "Łączymy: 30 -> 20." },
+      { group: "Faza 1: Rozstawienie (30-20-10)", cmd: "ALLOC", var_name: "w3", val_payload: { val: 10, x: 600, y: 200 }, explanation: "Trzeci węzeł to 10." },
+      { group: "Faza 1: Rozstawienie (30-20-10)", cmd: "ASSIGN_FIELD", var_name: "w2", field_name: "next", source_var: "w3", explanation: "Pociąg gotowy: 30 -> 20 -> 10." },
+      { group: "Faza 1: Rozstawienie (30-20-10)", cmd: "ASSIGN_VAR", var_name: "head", source_var: "w1", explanation: "Naklejamy znacznik 'head' na początek." },
+
+      // Faza 2: Pierwszy skok bąbla (30 > 20)
+      { group: "Faza 2: Zamiana 30 i 20", cmd: "ASSIGN_VAR", var_name: "curr", source_var: "w1", explanation: "Ustawiamy wskaźnik 'curr' na pierwszym węźle (30)." },
+      { group: "Faza 2: Zamiana 30 i 20", cmd: "ASSIGN_VAR", var_name: "nxt", source_var: "w2", explanation: "Wskaźnik 'nxt' patrzy na kolejny węzeł (20)." },
+      { group: "Faza 2: Zamiana 30 i 20", cmd: "COMPARE", var_name: "curr", field_name: ">", val_payload: { targetNode: "res", compareMode: "variable", rightValue: "nxt" }, explanation: "Czy 30 jest większe od 20? TAK. Musimy zamienić je miejscami!" },
+
+      { group: "Faza 2: Zamiana 30 i 20", cmd: "ASSIGN_VAR", var_name: "temp", source_var: "w3", explanation: "Zabezpieczamy resztę pociągu (węzeł 10)." },
+      { group: "Faza 2: Zamiana 30 i 20", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "next", source_var: "temp", explanation: "Krok 1: Węzeł 30 puszcza 20 i łapie od razu węzeł 10." },
+      { group: "Faza 2: Zamiana 30 i 20", cmd: "ASSIGN_FIELD", var_name: "nxt", field_name: "next", source_var: "curr", explanation: "Krok 2: Węzeł 20 odwraca się i łapie węzeł 30. (Zwróć uwagę na krzyżujące się strzałki!)" },
+      { group: "Faza 2: Zamiana 30 i 20", cmd: "ASSIGN_VAR", var_name: "head", source_var: "nxt", explanation: "Krok 3: Węzeł 20 staje się nowym początkiem listy (head). Mamy teraz: 20 -> 30 -> 10." },
+
+      // Faza 3: Drugi skok bąbla (30 > 10)
+      { group: "Faza 3: Zamiana 30 i 10", cmd: "ASSIGN_VAR", var_name: "prev", source_var: "w2", explanation: "Zmienna 'prev' (węzeł 20) stoi przed naszym bąblem." },
+      { group: "Faza 3: Zamiana 30 i 10", cmd: "ASSIGN_VAR", var_name: "curr", source_var: "w1", explanation: "Nasz bąbel (30) to obecnie zmienna 'curr'." },
+      { group: "Faza 3: Zamiana 30 i 10", cmd: "ASSIGN_VAR", var_name: "nxt", source_var: "w3", explanation: "Bąbel patrzy teraz na węzeł 10 ('nxt')." },
+      { group: "Faza 3: Zamiana 30 i 10", cmd: "COMPARE", var_name: "curr", field_name: ">", val_payload: { targetNode: "res", compareMode: "variable", rightValue: "nxt" }, explanation: "Czy 30 jest większe od 10? TAK. Bąbelek znów przeskakuje w prawo!" },
+
+      { group: "Faza 3: Zamiana 30 i 10", cmd: "SET_FIELD_NULL", var_name: "curr", field_name: "next", explanation: "Krok 1: Węzeł 30 puszcza 10 i patrzy w pustkę (będzie ostatni)." },
+      { group: "Faza 3: Zamiana 30 i 10", cmd: "ASSIGN_FIELD", var_name: "prev", field_name: "next", source_var: "nxt", explanation: "Krok 2: Węzeł 20 omija 30 i łapie 10." },
+      { group: "Faza 3: Zamiana 30 i 10", cmd: "ASSIGN_FIELD", var_name: "nxt", field_name: "next", source_var: "curr", explanation: "Krok 3: Węzeł 10 łapie zrzuconą 30-tkę. PIERWSZE OKRĄŻENIE ZAKOŃCZONE! Bąbel wypłynął: 20 -> 10 -> 30." },
+
+      // Faza 4: Druga iteracja (20 > 10)
+      { group: "Faza 4: Druga Iteracja (20 i 10)", cmd: "ASSIGN_VAR", var_name: "curr", source_var: "w2", explanation: "Rozpoczynamy drugie okrążenie. 'curr' wskazuje znów na początek (węzeł 20)." },
+      { group: "Faza 4: Druga Iteracja (20 i 10)", cmd: "ASSIGN_VAR", var_name: "nxt", source_var: "w3", explanation: "Przed nim stoi węzeł 10." },
+      { group: "Faza 4: Druga Iteracja (20 i 10)", cmd: "COMPARE", var_name: "curr", field_name: ">", val_payload: { targetNode: "res", compareMode: "variable", rightValue: "nxt" }, explanation: "Czy 20 jest większe od 10? TAK." },
+
+      { group: "Faza 4: Druga Iteracja (20 i 10)", cmd: "ASSIGN_VAR", var_name: "temp", source_var: "w1", explanation: "Zabezpieczamy posortowaną końcówkę (węzeł 30)." },
+      { group: "Faza 4: Druga Iteracja (20 i 10)", cmd: "ASSIGN_FIELD", var_name: "curr", field_name: "next", source_var: "temp", explanation: "Krok 1: Węzeł 20 łapie 30-tkę." },
+      { group: "Faza 4: Druga Iteracja (20 i 10)", cmd: "ASSIGN_FIELD", var_name: "nxt", field_name: "next", source_var: "curr", explanation: "Krok 2: Węzeł 10 odwraca się i łapie 20-tkę." },
+      { group: "Faza 4: Druga Iteracja (20 i 10)", cmd: "ASSIGN_VAR", var_name: "head", source_var: "nxt", explanation: "Krok 3: Węzeł 10 ląduje na początku. Wymieniliśmy miejscami 20 i 10." },
+
+      // Finał
+      { group: "Faza 5: Posortowane", cmd: "ASSIGN_VAR", var_name: "SUKCES", source_var: "head", explanation: "FINAŁ! Lista została całkowicie posortowana: 10 -> 20 -> 30. Tak dynamiczne operacje idealnie pokazują siłę zaimplementowanego silnika!" }
     ]
   }
-];
+]
