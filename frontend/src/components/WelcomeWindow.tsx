@@ -26,7 +26,7 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
 
     const checkHealth = async () => {
       try {
-        const response = await fetch('http://localhost:8000/', { method: 'GET' });
+        const response = await fetch('https://edualgo-backend.onrender.com/', { method: 'GET' });
 
         if (response.ok) {
           setBackendStatus('ready');
