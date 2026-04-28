@@ -1,11 +1,10 @@
 // Ścieżka: src/components/WelcomeWindow.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { FloatingWindow } from './FloatingWindow';
-import { Cpu, Rocket, BookOpen, ShieldCheck, Terminal, Zap, Code2, Globe, Server, Play, CheckCircle2 } from 'lucide-react';
+import { Cpu, Rocket, BookOpen, ShieldCheck, Terminal, Zap, Code2, Globe, Server, Play, CheckCircle2, Coffee } from 'lucide-react';
 import clsx from 'clsx';
 
 export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
-  // 1. Zwiększona stała wysokość, by zawartość swobodnie oddychała
   const FIXED_WIDTH = 550;
   const FIXED_HEIGHT = 600;
 
@@ -19,29 +18,47 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
     z: 9999
   });
 
-  const [backendStatus, setBackendStatus] = useState('waking');
+  // Statusy: 'checking' | 'sleeping' | 'waking' | 'ready'
+  const [backendStatus, setBackendStatus] = useState('checking');
 
+  // --- FUNKCJA SPRAWDZAJĄCA ---
+  const checkHealth = useCallback(async () => {
+    try {
+      // PODMIEŃ NA: https://twoja-nazwa.onrender.com/
+      const response = await fetch('http://localhost:8000/', { method: 'GET' });
+      if (response.ok) {
+        setBackendStatus('ready');
+        return true;
+      }
+    } catch (error) {
+      return false;
+    }
+    return false;
+  }, []);
+
+  // --- LOGIKA POLLINGU ---
   useEffect(() => {
     let intervalId;
 
-    const checkHealth = async () => {
-      try {
-        const response = await fetch('https://edualgo-backend.onrender.com/', { method: 'GET' });
+    if (backendStatus === 'checking') {
+      checkHealth().then(isUp => {
+        if (!isUp) setBackendStatus('sleeping');
+      });
+    }
 
-        if (response.ok) {
-          setBackendStatus('ready');
-          clearInterval(intervalId);
-        }
-      } catch (error) {
-        setBackendStatus('waking');
-      }
-    };
-
-    checkHealth();
-    intervalId = setInterval(checkHealth, 3000);
+    if (backendStatus === 'waking') {
+      intervalId = setInterval(async () => {
+        const isUp = await checkHealth();
+        if (isUp) clearInterval(intervalId);
+      }, 3000);
+    }
 
     return () => clearInterval(intervalId);
-  }, []);
+  }, [backendStatus, checkHealth]);
+
+  const handleWakeBackend = () => {
+    setBackendStatus('waking');
+  };
 
   const handlePosChange = (id, x, y) => setState(prev => ({ ...prev, x, y }));
   const handleSizeChange = () => {};
@@ -57,7 +74,6 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
   );
 
   const ExpandedView = (
-    // DODANO: absolute inset-0 - zmusza kontener do idealnego wpasowania się w okno
     <div className="absolute inset-0 flex flex-col bg-[#0a0a0c] overflow-hidden nodrag rounded-lg">
 
       {/* SEKTOR 1: NAGŁÓWEK META */}
@@ -81,55 +97,67 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
         </div>
       </div>
 
-      {/* SEKTOR 2: TREŚĆ (Scrollowana) */}
+      {/* SEKTOR 2: TREŚĆ */}
       <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6 space-y-5 relative z-0">
 
         {/* DYNAMICZNY PANEL STATUSU BACKENDU */}
         <div className={clsx(
-            "flex items-center justify-between p-3 rounded-xl transition-all duration-700 ease-out border",
-            backendStatus === 'waking'
-                ? "bg-gray-900/80 border-gray-800"
-                : "bg-green-900/20 border-green-500/50 shadow-[0_0_20px_rgba(34,197,94,0.15)] scale-[1.01]"
+            "flex items-center justify-between p-4 rounded-xl transition-all duration-700 ease-out border",
+            backendStatus === 'ready'
+              ? "bg-green-900/20 border-green-500/50 shadow-[0_0_20px_rgba(34,197,94,0.15)]"
+              : "bg-gray-900/80 border-gray-800"
         )}>
-            <div className="flex flex-col">
+            <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
-                    <Server size={16} className={backendStatus === 'waking' ? "text-gray-500" : "text-green-400"} />
+                    <Server size={16} className={clsx(
+                      backendStatus === 'ready' ? "text-green-400" : "text-gray-500"
+                    )} />
                     <span className={clsx(
-                        "text-xs font-mono font-bold uppercase tracking-wider transition-colors",
-                        backendStatus === 'waking' ? "text-gray-300" : "text-green-400"
+                        "text-xs font-mono font-bold uppercase tracking-wider",
+                        backendStatus === 'ready' ? "text-green-400" : "text-gray-300"
                     )}>
-                        Silnik EduAlgo (Backend)
+                        Status Silnika (Backend)
                     </span>
                 </div>
-                {backendStatus === 'waking' ? (
-                    <span className="text-[10px] text-gray-500 mt-1 italic font-mono">
-                        Darmowy serwer się wybudza. Proszę o cierpliwość...
-                    </span>
-                ) : (
-                    <span className="text-[10px] text-green-300/80 mt-1 italic font-mono flex items-center gap-1 animate-in fade-in duration-500">
-                        <CheckCircle2 size={12} className="text-green-400" />
-                        Serwer wybudzony! System w pełni operacyjny.
-                    </span>
-                )}
+                <span className="text-[10px] font-mono italic">
+                    {backendStatus === 'checking' && "Inicjalizacja połączenia..."}
+                    {backendStatus === 'sleeping' && <span className="text-gray-500">Silnik aktualnie śpi. Wymagane ręczne wybudzenie.</span>}
+                    {backendStatus === 'waking' && <span className="text-yellow-500 animate-pulse">Sygnał wysłany. Budzenie instancji Render...</span>}
+                    {backendStatus === 'ready' && <span className="text-green-400">Połączenie nawiązane. Backend obudzony.</span>}
+                </span>
             </div>
-            <div className="flex items-center gap-2 shrink-0 bg-black/40 px-2 py-1.5 rounded-lg border border-white/5">
-                {backendStatus === 'waking' ? (
-                    <>
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
-                        </span>
-                        <span className="text-[10px] text-yellow-500 font-bold animate-pulse">BUDZENIE (~50s)</span>
-                    </>
-                ) : (
-                    <>
+
+            <div className="flex items-center gap-3">
+              {backendStatus === 'sleeping' && (
+                <button
+                  onClick={handleWakeBackend}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-black tracking-widest transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+                >
+                  <Coffee size={12} /> OBUDŹ BACKEND
+                </button>
+              )}
+
+              <div className="flex items-center gap-2 bg-black/40 px-2 py-1.5 rounded-lg border border-white/5">
+                  {backendStatus === 'ready' ? (
+                      <div className="flex items-center gap-2">
                         <span className="relative flex h-2.5 w-2.5">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-50"></span>
-                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
                         </span>
-                        <span className="text-[11px] text-green-400 font-black tracking-widest">GOTOWY</span>
-                    </>
-                )}
+                        <span className="text-[10px] text-green-400 font-black">GOTOWY</span>
+                      </div>
+                  ) : (
+                      <div className="flex items-center gap-2">
+                        <span className={clsx(
+                          "h-2 w-2 rounded-full",
+                          backendStatus === 'waking' ? "bg-yellow-500 animate-pulse" : "bg-gray-700"
+                        )}></span>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase">
+                          {backendStatus === 'waking' ? "BUDZENIE" : "UŚPIONY"}
+                        </span>
+                      </div>
+                  )}
+              </div>
             </div>
         </div>
 
@@ -150,22 +178,23 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
         </div>
       </div>
 
-      {/* SEKTOR 3: STOPKA - Zmieniono tło na pełne (bg-gray-950) i dodano z-20 */}
+      {/* SEKTOR 3: STOPKA */}
       <div className="shrink-0 p-4 bg-gray-950 border-t border-gray-800 flex flex-col gap-2 relative z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.5)]">
         <button
           onClick={onStartTutorial}
           className={clsx(
             "group relative w-full overflow-hidden rounded-xl p-0.5 transition-all hover:scale-[1.01] active:scale-[0.99]",
-            backendStatus === 'ready' ? "shadow-[0_0_20px_rgba(59,130,246,0.3)] animate-in slide-in-from-bottom-2 duration-500" : ""
+            backendStatus === 'ready' ? "shadow-[0_0_20px_rgba(59,130,246,0.3)]" : "opacity-50 grayscale cursor-not-allowed"
           )}
+          disabled={backendStatus !== 'ready'}
         >
           <div className={clsx(
               "absolute inset-0 animate-gradient-x",
-              backendStatus === 'ready' ? "bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500" : "bg-gradient-to-r from-blue-600 to-indigo-600"
+              backendStatus === 'ready' ? "bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500" : "bg-gray-700"
           )}></div>
           <div className="relative flex items-center justify-center gap-3 bg-gray-900 px-6 py-3 rounded-[10px] transition-all group-hover:bg-transparent">
-             <Play size={16} className={clsx("transition-colors", backendStatus === 'ready' ? "text-green-400 group-hover:text-white" : "text-blue-400 group-hover:text-white")} />
-             <span className="text-xs font-black tracking-[0.15em] text-white uppercase group-hover:text-white shadow-black drop-shadow-md">
+             <Play size={16} className={clsx("transition-colors", backendStatus === 'ready' ? "text-green-400 group-hover:text-white" : "text-gray-500")} />
+             <span className="text-xs font-black tracking-[0.15em] text-white uppercase shadow-black drop-shadow-md">
                 Rozpocznij Poradnik
              </span>
           </div>
