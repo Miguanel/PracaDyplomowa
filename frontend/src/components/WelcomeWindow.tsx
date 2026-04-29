@@ -1,8 +1,14 @@
 // Ścieżka: src/components/WelcomeWindow.jsx
 import { useState, useEffect, useCallback } from 'react';
 import { FloatingWindow } from './FloatingWindow';
-import { Cpu, Rocket, BookOpen, ShieldCheck, Terminal, Zap, Code2, Globe, Server, Play, CheckCircle2, Coffee } from 'lucide-react';
+import { Cpu, Rocket, BookOpen, ShieldCheck, Terminal, Zap, Code2, Globe, Server, Play, CheckCircle2, ExternalLink } from 'lucide-react';
 import clsx from 'clsx';
+
+// ============================================================================
+// ⚠️ WAŻNE: WPISZ TUTAJ SWÓJ ADRES BACKENDU Z RENDER.COM
+// Zwróć uwagę, żeby usunąć znak ukośnika "/" na samym końcu adresu!
+// ============================================================================
+const BACKEND_URL = 'https://twoja-nazwa.onrender.com';
 
 export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
   const FIXED_WIDTH = 550;
@@ -24,8 +30,7 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
   // --- FUNKCJA SPRAWDZAJĄCA ---
   const checkHealth = useCallback(async () => {
     try {
-      // PODMIEŃ NA: https://twoja-nazwa.onrender.com/
-      const response = await fetch('http://localhost:8000/', { method: 'GET' });
+      const response = await fetch(`${BACKEND_URL}/`, { method: 'GET' });
       if (response.ok) {
         setBackendStatus('ready');
         return true;
@@ -46,6 +51,7 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
       });
     }
 
+    // Jeśli kliknięto wybudzanie, sprawdzaj co 3 sekundy czy już wstał
     if (backendStatus === 'waking') {
       intervalId = setInterval(async () => {
         const isUp = await checkHealth();
@@ -56,8 +62,11 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
     return () => clearInterval(intervalId);
   }, [backendStatus, checkHealth]);
 
+  // --- WYMUSZONE BUDZENIE (NOWA KARTA) ---
   const handleWakeBackend = () => {
     setBackendStatus('waking');
+    // Bezpośrednie uderzenie w serwer wymusza na Renderze start kontenera
+    window.open(`${BACKEND_URL}/`, '_blank', 'noopener,noreferrer');
   };
 
   const handlePosChange = (id, x, y) => setState(prev => ({ ...prev, x, y }));
@@ -107,7 +116,7 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
               ? "bg-green-900/20 border-green-500/50 shadow-[0_0_20px_rgba(34,197,94,0.15)]"
               : "bg-gray-900/80 border-gray-800"
         )}>
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1 w-full max-w-[280px]">
                 <div className="flex items-center gap-2">
                     <Server size={16} className={clsx(
                       backendStatus === 'ready' ? "text-green-400" : "text-gray-500"
@@ -121,43 +130,45 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
                 </div>
                 <span className="text-[10px] font-mono italic">
                     {backendStatus === 'checking' && "Inicjalizacja połączenia..."}
-                    {backendStatus === 'sleeping' && <span className="text-gray-500">Silnik aktualnie śpi. Wymagane ręczne wybudzenie.</span>}
-                    {backendStatus === 'waking' && <span className="text-yellow-500 animate-pulse">Sygnał wysłany. Budzenie instancji Render...</span>}
-                    {backendStatus === 'ready' && <span className="text-green-400">Połączenie nawiązane. Backend obudzony.</span>}
+                    {backendStatus === 'sleeping' && <span className="text-gray-500">Silnik aktualnie śpi. Wymagane twarde wybudzenie (nowa karta).</span>}
+                    {backendStatus === 'waking' && <span className="text-yellow-500 animate-pulse">Nowa karta została otwarta. Oczekuję na uruchomienie maszyny...</span>}
+                    {backendStatus === 'ready' && <span className="text-green-400">Połączenie nawiązane. Backend w pełni operacyjny. Możesz zamknąć drugą kartę.</span>}
                 </span>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 shrink-0">
               {backendStatus === 'sleeping' && (
                 <button
                   onClick={handleWakeBackend}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-black tracking-widest transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+                  className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-black tracking-widest transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)]"
                 >
-                  <Coffee size={12} /> OBUDŹ BACKEND
+                  OBUDŹ BACKEND <ExternalLink size={12} />
                 </button>
               )}
 
-              <div className="flex items-center gap-2 bg-black/40 px-2 py-1.5 rounded-lg border border-white/5">
-                  {backendStatus === 'ready' ? (
-                      <div className="flex items-center gap-2">
-                        <span className="relative flex h-2.5 w-2.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-50"></span>
-                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
-                        </span>
-                        <span className="text-[10px] text-green-400 font-black">GOTOWY</span>
-                      </div>
-                  ) : (
-                      <div className="flex items-center gap-2">
-                        <span className={clsx(
-                          "h-2 w-2 rounded-full",
-                          backendStatus === 'waking' ? "bg-yellow-500 animate-pulse" : "bg-gray-700"
-                        )}></span>
-                        <span className="text-[10px] text-gray-500 font-bold uppercase">
-                          {backendStatus === 'waking' ? "BUDZENIE" : "UŚPIONY"}
-                        </span>
-                      </div>
-                  )}
-              </div>
+              {backendStatus !== 'sleeping' && (
+                <div className="flex items-center gap-2 bg-black/40 px-3 py-2 rounded-lg border border-white/5">
+                    {backendStatus === 'ready' ? (
+                        <div className="flex items-center gap-2">
+                          <span className="relative flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-50"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                          </span>
+                          <span className="text-[10px] text-green-400 font-black tracking-widest">GOTOWY</span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                          <span className={clsx(
+                            "h-2 w-2 rounded-full",
+                            backendStatus === 'waking' ? "bg-yellow-500 animate-pulse" : "bg-gray-700"
+                          )}></span>
+                          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                            {backendStatus === 'waking' ? "BUDZENIE..." : "SPRAWDZAM..."}
+                          </span>
+                        </div>
+                    )}
+                </div>
+              )}
             </div>
         </div>
 
