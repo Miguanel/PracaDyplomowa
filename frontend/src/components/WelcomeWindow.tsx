@@ -8,7 +8,7 @@ import clsx from 'clsx';
 // ⚠️ WAŻNE: WPISZ TUTAJ SWÓJ ADRES BACKENDU Z RENDER.COM
 // Zwróć uwagę, żeby usunąć znak ukośnika "/" na samym końcu adresu!
 // ============================================================================
-const BACKEND_URL = 'https://twoja-nazwa.onrender.com';
+const BACKEND_URL = 'https://edualgo-backend.onrender.com';
 
 export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
   const FIXED_WIDTH = 550;
