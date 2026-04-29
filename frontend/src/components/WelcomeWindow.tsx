@@ -4,10 +4,7 @@ import { FloatingWindow } from './FloatingWindow';
 import { Cpu, Rocket, BookOpen, ShieldCheck, Terminal, Zap, Code2, Globe, Server, Play, CheckCircle2, ExternalLink } from 'lucide-react';
 import clsx from 'clsx';
 
-// ============================================================================
-// ⚠️ WAŻNE: WPISZ TUTAJ SWÓJ ADRES BACKENDU Z RENDER.COM
-// Zwróć uwagę, żeby usunąć znak ukośnika "/" na samym końcu adresu!
-// ============================================================================
+
 const BACKEND_URL = 'https://edualgo-backend.onrender.com';
 
 export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
