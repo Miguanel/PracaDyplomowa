@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { X, ChevronRight, ChevronLeft, Check, Info } from 'lucide-react';
 import clsx from 'clsx';
 
+import { trackEvent } from '../services/analytics';
+
 export const TutorialOverlay = ({ onComplete, windowsData, zIndexManager }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRect, setTargetRect] = useState(null);
@@ -208,7 +210,13 @@ export const TutorialOverlay = ({ onComplete, windowsData, zIndexManager }) => {
                 <div className="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/30 text-[9px] text-blue-400 font-bold uppercase tracking-tighter">
                     EduAlgo Tutorial • {currentStep + 1}/{steps.length}
                 </div>
-                <button onClick={onComplete} className="text-gray-500 hover:text-white transition-colors">
+                <button
+                    onClick={() => {
+                        trackEvent('tutorial', 'tutorial_closed_early', `step_${currentStep + 1}`);
+                        onComplete();
+                    }}
+                    className="text-gray-500 hover:text-white transition-colors"
+                >
                     <X size={18} />
                 </button>
             </div>
@@ -238,14 +246,20 @@ export const TutorialOverlay = ({ onComplete, windowsData, zIndexManager }) => {
 
                 {currentStep === steps.length - 1 ? (
                     <button
-                        onClick={onComplete}
+                        onClick={() => {
+                            trackEvent('tutorial', 'tutorial_completed');
+                            onComplete();
+                        }}
                         className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-[10px] font-black transition-all shadow-[0_0_15px_rgba(34,197,94,0.4)] flex items-center gap-2"
                     >
                         GOTOWE <Check size={14} />
                     </button>
                 ) : (
                     <button
-                        onClick={() => setCurrentStep(prev => prev + 1)}
+                        onClick={() => {
+                            trackEvent('tutorial', 'tutorial_step_viewed', `step_${currentStep + 2}`);
+                            setCurrentStep(prev => prev + 1);
+                        }}
                         className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-[10px] font-black transition-all shadow-[0_0_15px_rgba(59,130,246,0.4)] flex items-center gap-2"
                     >
                         DALEJ <ChevronRight size={14} />

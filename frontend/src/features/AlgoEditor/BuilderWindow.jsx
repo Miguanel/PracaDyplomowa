@@ -4,13 +4,20 @@ import { FloatingWindow } from '../../components/FloatingWindow';
 import { Wrench } from 'lucide-react';
 import { AlgorithmBuilder } from './AlgorithmBuilder'; // Import komponentu z logiką budowania
 import clsx from 'clsx';
+import { trackEvent } from '../../services/analytics';
 
 export const BuilderWindow = ({ windowState, windowActions, zIndexManager }) => {
   // ==========================================================================
   // WIDOK: ZWINIĘTY
   // ==========================================================================
   const MinimizedView = (
-    <div className="p-2 bg-gray-950 shadow-inner flex items-center justify-between group cursor-pointer" onClick={() => windowActions.toggleMinimize('builder')}>
+    <div
+        className="p-2 bg-gray-950 shadow-inner flex items-center justify-between group cursor-pointer"
+        onClick={() => {
+            trackEvent('sandbox', 'builder_window_maximized');
+            windowActions.toggleMinimize('builder');
+        }}
+    >
         <div className="flex items-center gap-2 text-[10px] font-mono text-blue-400">
             <Wrench size={14} className="group-hover:rotate-12 transition-transform" />
             <span className="font-bold uppercase tracking-widest">Kreator Sandbox...</span>

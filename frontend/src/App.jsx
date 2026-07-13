@@ -7,6 +7,7 @@ import { Cpu, PlusCircle, RotateCcw, HelpCircle, Info, Layout } from 'lucide-rea
 import { TutorialOverlay } from './components/TutorialOverlay';
 import { FloatingWindow } from './components/FloatingWindow';
 import { WelcomeWindow } from './components/WelcomeWindow';
+import { initAnalytics, trackEvent } from './services/analytics';
 
 // ZREFAKTORYZOWANE OKNA MODULARNE
 import { PlayerWindow } from './features/AlgoEditor/PlayerWindow';
@@ -40,6 +41,9 @@ export default function App() {
     const screenH = window.innerHeight;
     const wLeft = Math.min(400, screenW * 0.3);
     const wRight = Math.min(420, screenW * 0.3);
+
+    // Odpalenie silnika analitycznego
+    initAnalytics();
 
     initializeLayout({
       scene:   { x: 20, y: 70, w: wLeft, h: 150, pinned: false, minimized: false, z: 10 },
@@ -83,15 +87,32 @@ export default function App() {
         </div>
         <div className="flex items-center gap-3">
           <button
-              onClick={intelligentLayout}
+              onClick={() => {
+                trackEvent('ui', 'window_layout_auto');
+                intelligentLayout();
+              }}
               className="px-3 py-1.5 bg-blue-900/30 text-blue-400 border border-blue-800 hover:bg-blue-900/50 rounded text-xs font-bold transition-all flex items-center gap-1.5 shadow-[0_0_10px_rgba(59,130,246,0.2)]"
             >
               <Layout size={14} /> UŁÓŻ OKNA
             </button>
-          <button onClick={() => setShowTutorial(true)} className="px-3 py-1.5 bg-indigo-900/30 text-indigo-400 border border-indigo-800 hover:bg-indigo-900/50 rounded text-xs font-bold transition-all flex items-center gap-1.5">
+          <button
+              onClick={() => {
+                  trackEvent('tutorial', 'tutorial_manual_start', 'header_button');
+                  setShowTutorial(true);
+              }}
+              className="px-3 py-1.5 bg-indigo-900/30 text-indigo-400 border border-indigo-800 hover:bg-indigo-900/50 rounded text-xs font-bold transition-all flex items-center gap-1.5"
+          >
               <HelpCircle size={14} /> PORADNIK
           </button>
-          <button onClick={() => window.confirm("Zrestartować system?") && resetMemory()} className="px-3 py-1.5 bg-red-900/30 text-red-400 border border-red-800 hover:bg-red-900/50 rounded text-xs font-bold transition-all flex items-center gap-1.5">
+          <button
+              onClick={() => {
+                  if (window.confirm("Zrestartować system?")) {
+                      trackEvent('sandbox', 'memory_reset', 'header_button');
+                      resetMemory();
+                  }
+              }}
+              className="px-3 py-1.5 bg-red-900/30 text-red-400 border border-red-800 hover:bg-red-900/50 rounded text-xs font-bold transition-all flex items-center gap-1.5"
+          >
               <RotateCcw size={14} /> RESTART
           </button>
         </div>
@@ -148,7 +169,16 @@ export default function App() {
             <input type="text" value={newNodeLabel} onChange={(e) => setNewNodeLabel(e.target.value)} placeholder="Etykieta" className="w-1/2 bg-gray-950 text-xs p-2 rounded border border-gray-700 outline-none focus:border-purple-500" />
             <input type="number" value={newNodeValue} onChange={(e) => setNewNodeValue(e.target.value)} placeholder="Val" className="w-1/2 bg-gray-950 text-xs p-2 rounded border border-gray-700 outline-none focus:border-purple-500" />
           </div>
-          <button onClick={() => allocateNode(newNodeLabel, parseInt(newNodeValue))} disabled={isLoading} className="w-full bg-purple-600 hover:bg-purple-500 py-2 rounded text-xs font-bold text-white transition-colors shadow-[0_0_15px_rgba(147,51,234,0.3)]">Stwórz Węzeł</button>
+          <button
+              onClick={() => {
+                  trackEvent('sandbox', 'node_allocated', newNodeLabel);
+                  allocateNode(newNodeLabel, parseInt(newNodeValue));
+              }}
+              disabled={isLoading}
+              className="w-full bg-purple-600 hover:bg-purple-500 py-2 rounded text-xs font-bold text-white transition-colors shadow-[0_0_15px_rgba(147,51,234,0.3)]"
+          >
+              Stwórz Węzeł
+          </button>
         </div>
       </FloatingWindow>
 

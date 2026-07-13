@@ -4,6 +4,7 @@ import { FloatingWindow } from './FloatingWindow';
 import { Cpu, Rocket, BookOpen, ShieldCheck, Terminal, Zap, Code2, Globe, Server, Play, CheckCircle2, ExternalLink } from 'lucide-react';
 import clsx from 'clsx';
 
+import { trackEvent } from '../services/analytics';
 
 const BACKEND_URL = 'https://edualgo-backend.onrender.com';
 
@@ -63,6 +64,7 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
   const handleWakeBackend = () => {
     setBackendStatus('waking');
     // Bezpośrednie uderzenie w serwer wymusza na Renderze start kontenera
+    trackEvent('system', 'wake_backend_clicked', 'manual_trigger');
     window.open(`${BACKEND_URL}/`, '_blank', 'noopener,noreferrer');
   };
 
@@ -189,7 +191,10 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
       {/* SEKTOR 3: STOPKA */}
       <div className="shrink-0 p-4 bg-gray-950 border-t border-gray-800 flex flex-col gap-2 relative z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.5)]">
         <button
-          onClick={onStartTutorial}
+          onClick={() => {
+            trackEvent('tutorial', 'tutorial_start', 'welcome_window');
+            onStartTutorial();
+          }}
           className={clsx(
             "group relative w-full overflow-hidden rounded-xl p-0.5 transition-all hover:scale-[1.01] active:scale-[0.99]",
             backendStatus === 'ready' ? "shadow-[0_0_20px_rgba(59,130,246,0.3)]" : "opacity-50 grayscale cursor-not-allowed"
@@ -208,7 +213,10 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
           </div>
         </button>
         <button
-            onClick={onClose}
+            onClick={() => {
+                trackEvent('tutorial', 'tutorial_skip', 'welcome_window');
+                onClose();
+            }}
             className="text-[10px] text-gray-500 hover:text-gray-300 font-bold tracking-widest uppercase transition-colors py-1"
         >
             Pomiń i wejdź do systemu

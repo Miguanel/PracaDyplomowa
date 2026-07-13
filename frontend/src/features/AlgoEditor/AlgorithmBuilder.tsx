@@ -6,6 +6,7 @@ import { Save, Plus, Layers, Info, Play, Pause, SkipForward, RotateCcw, Trash2, 
 import { INSTRUCTION_DEFS } from './instructionDefinitions';
 import type { InstructionType } from './instructionDefinitions';
 import clsx from 'clsx';
+import { trackEvent } from '../../services/analytics';
 // --- KOMPONENTY POMOCNICZE ---
 
 
@@ -217,6 +218,7 @@ export const AlgorithmBuilder = () => {
         newStep.val_payload = parseInt(inputs.val_payload) || 0;
     }
 
+    trackEvent('sandbox', 'builder_step_added', def.cmd);
     setSteps([...steps, newStep]);
     setInputs(prev => ({ ...prev, explanation: "" }));
   };
@@ -236,6 +238,7 @@ export const AlgorithmBuilder = () => {
     if (!algoToImport) algoToImport = customAlgorithms.find(a => a.id === algoId);
 
     if (algoToImport) {
+        trackEvent('sandbox', 'builder_template_imported', algoToImport.title);
         setAlgoName(algoToImport.title);
         setAlgoDesc(algoToImport.description);
         setSteps([...algoToImport.steps]);
@@ -246,6 +249,10 @@ export const AlgorithmBuilder = () => {
 
   const handleSave = () => {
     if (!algoName) return alert("Podaj nazwę algorytmu!");
+
+    // Przekazujemy długość kroków jako wartość (value), żeby wiedzieć, jak długie skrypty piszą!
+    trackEvent('sandbox', 'algorithm_saved', algoName, steps.length);
+
     saveCustomAlgorithm({
       id: algoName.toLowerCase().replace(/\s/g, '_'),
       title: algoName,
@@ -582,7 +589,14 @@ export const AlgorithmBuilder = () => {
          <div className="flex gap-2 items-center">
              <div className="flex bg-black/40 border border-gray-800 rounded overflow-hidden">
                  <button onClick={() => { setPreviewIndex(-1); setIsPlaying(false); }} title="Od nowa" className="p-2 bg-gray-800 hover:bg-gray-700 text-white transition-colors border-r border-gray-700"><RotateCcw size={16} /></button>
-                 <button onClick={() => setIsPlaying(!isPlaying)} title={isPlaying ? "Pauza" : "Odtwarzaj test"} className="px-4 bg-indigo-600 hover:bg-indigo-500 text-white flex justify-center transition-colors">
+                 <button
+                     onClick={() => {
+                         trackEvent('sandbox', !isPlaying ? 'builder_test_play' : 'builder_test_pause');
+                         setIsPlaying(!isPlaying);
+                     }}
+                     title={isPlaying ? "Pauza" : "Odtwarzaj test"}
+                     className="px-4 bg-indigo-600 hover:bg-indigo-500 text-white flex justify-center transition-colors"
+                 >
                     {isPlaying ? <Pause size={16} /> : <Play size={16} fill="currentColor" />}
                  </button>
                  <button onClick={runNextStep} disabled={isPlaying || previewIndex >= steps.length - 1} title="Krok do przodu" className="p-2 bg-gray-800 hover:bg-gray-700 text-white disabled:opacity-50 transition-colors border-l border-gray-700"><SkipForward size={16} /></button>

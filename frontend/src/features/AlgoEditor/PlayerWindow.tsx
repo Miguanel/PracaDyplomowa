@@ -5,6 +5,7 @@ import { useMemoryStore } from '../../store/memoryStore';
 import { ALGORITHMS_DB } from '../../data/algorithms';
 import { Play, Pause, RotateCcw, SkipForward, SkipBack, CheckCircle2, ChevronRight, Database } from 'lucide-react';
 import clsx from 'clsx';
+import { trackEvent } from '../../services/analytics';
 
 export const PlayerWindow = ({ windowState, windowActions, zIndexManager }) => {
   const {
@@ -59,7 +60,10 @@ export const PlayerWindow = ({ windowState, windowActions, zIndexManager }) => {
     if (!id) return;
     const allAlgorithms = [...ALGORITHMS_DB, ...(customAlgorithms || [])];
     const algo = allAlgorithms.find(a => a.id === id);
-    if (algo) resetMemory().then(() => loadAlgorithm(algo));
+    if (algo) {
+        trackEvent('player', 'algorithm_run', algo.title);
+        resetMemory().then(() => loadAlgorithm(algo));
+    }
   };
 
   // --- LOGIKA COFANIA (Szybki Rewind) ---
@@ -92,11 +96,18 @@ export const PlayerWindow = ({ windowState, windowActions, zIndexManager }) => {
             <SkipBack size={12} />
         </button>
 
-        <button onClick={() => setIsPlaying(!isPlaying)} disabled={!activeAlgorithm || isLoading || isDone} className={clsx(
+        <button
+            onClick={() => {
+                trackEvent('player', !isPlaying ? 'playback_start' : 'playback_pause');
+                setIsPlaying(!isPlaying);
+            }}
+            disabled={!activeAlgorithm || isLoading || isDone}
+            className={clsx(
                 "flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black tracking-wider transition-all disabled:opacity-30 border",
                 isPlaying ? "bg-yellow-600 hover:bg-yellow-500 text-yellow-50 border-yellow-500 shadow-[0_0_10px_rgba(202,138,4,0.5)]"
                           : "bg-green-600/90 hover:bg-green-500 text-green-50 border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]"
-            )}>
+            )}
+        >
             {isPlaying ? <Pause size={10} fill="currentColor"/> : <Play size={10} fill="currentColor"/>}
             {isPlaying ? "STOP" : "START"}
         </button>

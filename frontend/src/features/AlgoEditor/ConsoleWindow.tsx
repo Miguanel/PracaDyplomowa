@@ -5,6 +5,7 @@ import { useMemoryStore } from '../../store/memoryStore';
 import { TerminalSquare, Code } from 'lucide-react';
 import clsx from 'clsx';
 import { languageTemplates } from '../../utils/codeTranslators';
+import { trackEvent } from '../../services/analytics';
 
 export const ConsoleWindow = ({ windowState, windowActions, zIndexManager }) => {
   const { activeAlgorithm, currentStepIndex } = useMemoryStore();
@@ -51,7 +52,10 @@ export const ConsoleWindow = ({ windowState, windowActions, zIndexManager }) => 
             {['cpp', 'python', 'java', 'c', 'javascript', 'csharp', 'assembler', 'pseudo'].map(tab => (
                 <button
                     key={tab}
-                    onClick={() => setConsoleTab(tab)}
+                    onClick={() => {
+                        trackEvent('console', 'language_tab_click', tab);
+                        setConsoleTab(tab);
+                    }}
                     className={clsx(
                         "px-5 py-2.5 text-[10px] font-bold uppercase transition-all border-b-2 whitespace-nowrap",
                         consoleTab === tab
