@@ -431,6 +431,7 @@ export const AlgorithmBuilder = () => {
             theme="dark"
             minZoom={0.2}
             className="bg-black"
+            proOptions={{ hideAttribution: true }}
           >
             <Background color="#222" gap={16} />
 
