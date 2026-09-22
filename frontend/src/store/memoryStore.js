@@ -300,8 +300,8 @@ export const useMemoryStore = create((set, get) => ({
             const code = `${label} = new Node(${payload.fields.val});`;
             set(state => ({ codeHistory: [...state.codeHistory, code] }));
         } catch (err) {
-            set({ error: err.message });
-            throw err; // Zabezpieczenie: Wyrzucamy błąd wyżej, by zatrzymać odtwarzacz!
+            set({ error: err.message, simulationError: err.message }); // Bezpośrednie ustawienie modalu
+            throw err;
         } finally {
             set({ isLoading: false });
         }
@@ -313,13 +313,31 @@ export const useMemoryStore = create((set, get) => ({
             field_name: fieldName,
             source_expression: targetAddr
         };
-        const response = await fetch(`${API_URL}/api/memory/assign_pointer`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
-        });
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.detail || `Błąd dowiązania wskaźnika: ${sourceAddr}->${fieldName} = ${targetAddr}`);
+
+        let response;
+        try {
+            response = await fetch(`${API_URL}/api/memory/assign_pointer`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+        } catch (netErr) {
+            throw new Error(`Błąd sieciowy podczas operacji na wskaźniku: ${netErr.message}`);
         }
+
+        if (!response.ok) {
+            let errorDetail = `Dangling Pointer / Błąd dowiązania: ${sourceAddr}->${fieldName} = ${targetAddr}`;
+            try {
+                const errJson = await response.json();
+                if (errJson && errJson.detail) {
+                    errorDetail = typeof errJson.detail === 'string' ? errJson.detail : JSON.stringify(errJson.detail);
+                }
+            } catch (parseErr) {
+                // jeśli odpowiedź nie jest JSON-em
+            }
+            throw new Error(errorDetail);
+        }
+
         await get().fetchMemory();
         set(state => ({ codeHistory: [...state.codeHistory, `${sourceAddr}->${fieldName} = ${targetAddr};`] }));
     },
