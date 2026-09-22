@@ -45,10 +45,10 @@ const ActionNode = ({ data, id }: any) => {
     )}>
       {/* Większy, wygodny punkt wejścia */}
       <Handle
-        type="target"
-        position={Position.Top}
-        className="w-4 h-4 bg-blue-400 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform -top-2"
-      />
+          type="target"
+          position={Position.Top}
+          className="w-6 h-6 bg-blue-500 border-3 border-gray-900 rounded-full cursor-pointer hover:bg-blue-400 hover:scale-125 transition-all shadow-[0_0_10px_rgba(59,130,246,0.8)] -top-3"
+        />
 
       {/* Pasek nagłówka z wbudowanym, wyraźnym przyciskiem usuwania (X) */}
       <div className={clsx("px-3 py-2 flex justify-between items-center", isActive ? "bg-yellow-900/50 border-b border-yellow-500/50" : "bg-blue-900/50 border-b border-gray-700")}>
@@ -109,10 +109,10 @@ const ConditionNode = ({ data, id }: any) => {
       isActive ? "bg-gray-800 border-4 border-yellow-400 shadow-[0_0_25px_rgba(250,204,21,0.6)] scale-105 z-50" : "bg-gray-800 border-2 border-purple-500 shadow-xl shadow-purple-900/20"
     )}>
       <Handle
-        type="target"
-        position={Position.Top}
-        className="w-4 h-4 bg-purple-400 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform -top-2"
-      />
+          type="target"
+          position={Position.Top}
+          className="w-6 h-6 bg-blue-500 border-3 border-gray-900 rounded-full cursor-pointer hover:bg-blue-400 hover:scale-125 transition-all shadow-[0_0_10px_rgba(59,130,246,0.8)] -top-3"
+        />
 
       <div className={clsx("px-3 py-2 flex justify-between items-center", isActive ? "bg-yellow-900/50 border-b border-yellow-500/50" : "bg-purple-900/50 border-b border-gray-700")}>
         <div className="flex items-center gap-2">
@@ -145,8 +145,8 @@ const ConditionNode = ({ data, id }: any) => {
           </div>
         )}
       </div>
-      <Handle type="source" position={Position.Bottom} id="true" className="w-6 h-6 bg-green-500 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform" style={{ left: '30%' }} />
-      <Handle type="source" position={Position.Bottom} id="false" className="w-6 h-6 bg-red-500 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform" style={{ left: '70%' }} />
+      <Handle type="source" position={Position.Bottom} id="true" className="w-6 h-6 bg-green-500 border-3 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform" style={{ left: '30%' }} />
+      <Handle type="source" position={Position.Bottom} id="false" className="w-6 h-6 bg-red-500 border-3 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform" style={{ left: '70%' }} />
       <div className="flex justify-between px-6 pb-1 text-[9px] font-bold text-gray-500 bg-gray-900">
           <span className="text-green-500/70">PRAWDA</span>
           <span className="text-red-500/70">FAŁSZ</span>
