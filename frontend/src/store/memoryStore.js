@@ -17,6 +17,9 @@ export const useMemoryStore = create((set, get) => ({
     sandboxMemoryState: null,
     initialSandboxState: null,
 
+    simulationError: null,
+    setSimulationError: (msg) => set({ simulationError: msg }),
+
     codeHistory: [],
     isLoading: false,
     error: null,
@@ -98,9 +101,9 @@ export const useMemoryStore = create((set, get) => ({
         set({ nodes: generatedNodes, edges: generatedEdges, activeAlgorithm: algo });
     },
 
-    // ZMIANA 1 cd.: Twardy reset asynchroniczny zapobiega wyciekom stanu
+    // Twardy reset musi czyścić również błędy
     hardResetPlayback: async () => {
-        set({ isPlaying: false, activeNodeId: null, currentStepIndex: -1 });
+        set({ isPlaying: false, activeNodeId: null, currentStepIndex: -1, simulationError: null });
         const { isSandboxMode, exitSandboxMode } = get();
         if (isSandboxMode) {
             await exitSandboxMode();
@@ -254,7 +257,10 @@ export const useMemoryStore = create((set, get) => ({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
-            if (!response.ok) throw new Error(`Błąd alokacji`);
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.detail || `Błąd alokacji węzła ${label}`);
+            }
             const data = await response.json();
 
             const memoryData = data?.memory_dump ? data.memory_dump : data;
@@ -276,33 +282,42 @@ export const useMemoryStore = create((set, get) => ({
 
             const code = `${label} = new Node(${payload.fields.val});`;
             set(state => ({ codeHistory: [...state.codeHistory, code] }));
-        } catch (err) { set({ error: err.message }); } finally { set({ isLoading: false }); }
+        } catch (err) {
+            set({ error: err.message });
+            throw err; // Zabezpieczenie: Wyrzucamy błąd wyżej, by zatrzymać odtwarzacz!
+        } finally {
+            set({ isLoading: false });
+        }
     },
 
     connectNodes: async (sourceAddr, targetAddr, fieldName) => {
-        try {
-            const payload = {
-                target_expression: sourceAddr,
-                field_name: fieldName,
-                source_expression: targetAddr
-            };
-            await fetch(`${API_URL}/api/memory/assign_pointer`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
-            });
-            await get().fetchMemory();
-            set(state => ({ codeHistory: [...state.codeHistory, `${sourceAddr}->${fieldName} = ${targetAddr};`] }));
-        } catch (err) { console.error("Connect err:", err); }
+        const payload = {
+            target_expression: sourceAddr,
+            field_name: fieldName,
+            source_expression: targetAddr
+        };
+        const response = await fetch(`${API_URL}/api/memory/assign_pointer`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || `Błąd dowiązania wskaźnika: ${sourceAddr}->${fieldName} = ${targetAddr}`);
+        }
+        await get().fetchMemory();
+        set(state => ({ codeHistory: [...state.codeHistory, `${sourceAddr}->${fieldName} = ${targetAddr};`] }));
     },
 
     setVariable: async (name, address) => {
-      try {
-          await fetch(`${API_URL}/api/memory/variable`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ name: name, source_expression: address }),
-          });
-          await get().fetchMemory();
-      } catch (err) { console.error("SetVariable error:", err); }
+        const response = await fetch(`${API_URL}/api/memory/variable`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name, source_expression: address }),
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || `Nie można przypisać zmiennej: ${name}`);
+        }
+        await get().fetchMemory();
     },
 
     runAlgorithmStep: async (instruction) => {
@@ -336,25 +351,31 @@ export const useMemoryStore = create((set, get) => ({
                 case 'FREE':
                     const exprToFree = instruction.var_name;
                     if (exprToFree) {
+                         const response = await fetch(`${API_URL}/api/memory/free`, {
+                             method: 'POST',
+                             headers: { 'Content-Type': 'application/json' },
+                             body: JSON.stringify({ target_expression: exprToFree })
+                         });
+                         if (!response.ok) {
+                             const err = await response.json().catch(() => ({}));
+                             throw new Error(err.detail || `Próba usunięcia nieistniejącego wskaźnika: ${exprToFree}`);
+                         }
                          set(state => ({ codeHistory: [...state.codeHistory, `delete ${exprToFree};`] }));
-                         try {
-                             await fetch(`${API_URL}/api/memory/free`, {
-                                 method: 'POST',
-                                 headers: { 'Content-Type': 'application/json' },
-                                 body: JSON.stringify({ target_expression: exprToFree })
-                             });
-                             await get().fetchMemory();
-                         } catch (err) { console.error("Free err", err); }
+                         await get().fetchMemory();
                     }
                     break;
 
                 case 'SET_VAL':
                     const targetExprVal = instruction.var_name;
                     if (targetExprVal) {
-                        await fetch(`${API_URL}/api/memory/write_value`, {
+                        const response = await fetch(`${API_URL}/api/memory/write_value`, {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ target_expression: targetExprVal, field_name: 'val', value: instruction.val_payload })
                         });
+                        if (!response.ok) {
+                             const err = await response.json().catch(() => ({}));
+                             throw new Error(err.detail || `Błąd nadpisania wartości dla: ${targetExprVal}`);
+                        }
                         await get().fetchMemory();
                     }
                     break;
@@ -372,13 +393,18 @@ export const useMemoryStore = create((set, get) => ({
                 case 'SET_FIELD_NULL':
                     const targetExprNull = instruction.var_name;
                     if (targetExprNull && instruction.field_name) {
-                        await fetch(`${API_URL}/api/memory/assign_pointer`, {
+                        const response = await fetch(`${API_URL}/api/memory/assign_pointer`, {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ target_expression: targetExprNull, field_name: instruction.field_name, source_expression: "NULL" })
                         });
+                        if (!response.ok) {
+                             const err = await response.json().catch(() => ({}));
+                             throw new Error(err.detail || `Nie można ustawić NULL dla: ${targetExprNull}->${instruction.field_name}`);
+                        }
                         await get().fetchMemory();
                     }
                     break;
+
                 case 'CHECK_NULL':
                     const ptrAddr = state.stack[instruction.var_name];
                     if (!ptrAddr) console.log(`[CHECK] ${instruction.var_name} JEST NULL`);
@@ -395,7 +421,7 @@ export const useMemoryStore = create((set, get) => ({
                     const rightValueRaw = payloadCmp.rightValue;
 
                     const leftAddrCmp = state.stack[leftVar];
-                    if (!leftAddrCmp) { console.warn(`[COMPARE] Zmienna ${leftVar} jest NULL`); break; }
+                    if (!leftAddrCmp) { throw new Error(`Zmienna na stosie nie istnieje: ${leftVar}`); }
                     const leftNode = state.heap.find(n => n.address === leftAddrCmp);
                     const leftVal = leftNode ? parseInt(leftNode.data.val) : 0;
 
@@ -422,7 +448,7 @@ export const useMemoryStore = create((set, get) => ({
 
                     const targetAddrCmp = state.stack[targetVar];
                     if (targetAddrCmp) {
-                         await fetch(`${API_URL}/api/memory/write`, {
+                         const response = await fetch(`${API_URL}/api/memory/write`, {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 source_address: targetAddrCmp,
@@ -430,17 +456,19 @@ export const useMemoryStore = create((set, get) => ({
                                 target_address: resultInt
                             })
                         });
+                        if (!response.ok) {
+                             const err = await response.json().catch(()=>({}));
+                             throw new Error(err.detail || `Błąd zapisu wyniku porównania`);
+                        }
                         await get().fetchMemory();
-                        console.log(`[COMPARE] ${leftVal} ${operator} ${rightVal} = ${resultInt} -> Zapisano w ${targetVar}`);
-                    } else {
-                        console.warn(`[COMPARE] Nie znaleziono zmiennej docelowej: ${targetVar}. Wynik (${resultInt}) przepadł.`);
                     }
-                    return resultBool; // <-- Kluczowe dla ścieżki rozgałęzień
+                    return resultBool;
             }
-            return true; // <-- Kluczowe dla kontynuacji zwykłych akcji
+            return true;
         } catch (e) {
-            console.error("Step Error:", e);
-            return false;
+            console.error("Krytyczny Błąd Kroku:", e.message);
+            get().setSimulationError(e.message);
+            return null; // Zwracamy NULL, jako flagę uwięzienia błędu!
         }
     },
 
@@ -538,7 +566,16 @@ export const useMemoryStore = create((set, get) => ({
 
         let conditionResult = true;
         if (currentNode.type !== 'startNode') {
-             conditionResult = await runAlgorithmStep(currentNode.data);
+             const stepResult = await runAlgorithmStep(currentNode.data);
+
+             // WYKRYCIE BŁĘDU KRYTYCZNEGO
+             if (stepResult === null) {
+                 console.error("Symulacja przerwana z powodu błędu operacji w pamięci.");
+                 set({ isPlaying: false, activeNodeId: currentNode.id });
+                 return; // Silnik zatrzymany natychmiast na błędnym bloku
+             }
+
+             conditionResult = stepResult;
         }
 
         let nextEdge = edges.find(e => e.source === currentNodeId);
