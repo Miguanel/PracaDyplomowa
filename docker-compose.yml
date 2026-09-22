@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  edualgo-backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      - ENV_MODE=production
+      # Menedżer Pamięci nasłuchuje zapytań z wewnętrznej sieci
+      - ALLOWED_ORIGINS=http://localhost
+    restart: always
+    networks:
+      - edualgo-network
+    # Zabezpieczenie limitujące użycie pamięci (Ochrona przed symulacją wycieków na warstwie OS)
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  edualgo-frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - edualgo-backend
+    restart: always
+    networks:
+      - edualgo-network
+
+networks:
+  edualgo-network:
+    driver: bridge

@@ -95,7 +95,7 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
           </div>
           <div>
             <h2 className="text-2xl font-black tracking-tighter text-white bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-500">
-              EduAlgo <span className="text-blue-500 text-lg">v2.0</span>
+              EduAlgoSystem <span className="text-blue-500 text-lg">v2.0</span>
             </h2>
             <div className="flex items-center gap-2 mt-1">
                 <div className="px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/30 text-[9px] text-blue-400 font-bold tracking-tighter uppercase">Kernel Loaded</div>

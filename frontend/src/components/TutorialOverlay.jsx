@@ -13,8 +13,8 @@ export const TutorialOverlay = ({ onComplete, windowsData, zIndexManager }) => {
     {
       target: 'center',
       placement: 'center',
-      title: 'Witaj w EduAlgo v2.0! 👋',
-      content: 'Właśnie uruchomiłeś zaawansowany system wizualizacji struktur danych. Pozwól, że w kilku krokach pokażę Ci jak opanować ten terminal.'
+      title: 'Witaj w EduAlgoSystem! 👋',
+      content: 'Właśnie uruchomiłeś zaawansowany system wizualizacji struktur danych wykorzystywanych w fabularnych algorytmach. Pozwól, że w kilku krokach pokażę Ci jak opanować ten interfejs.'
     },
     {
       target: '[data-id="scene"]',

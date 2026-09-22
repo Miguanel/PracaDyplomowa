@@ -2,12 +2,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any
-
+import os
 # Importujemy routery
-from app.routers import projects, simulation, memory
+from .routers import projects, simulation, memory
 
 # Importujemy nowy menedżer pamięci (Singleton), żeby Sandbox mógł z niego korzystać
-from app.services.memory_manager import memory_manager
+from .services.memory_manager import memory_manager
 
 # --- Jeśli masz stary plik engine/interpreter.py, to import może zostać,
 # --- ale pamiętaj, że teraz używamy memory_manager zamiast VirtualRAM.
@@ -15,17 +15,18 @@ from app.services.memory_manager import memory_manager
 # from app.schemas.actions import Instruction
 
 app = FastAPI(
-    title="EduAlgo API",
+    title="Interaktywny System Wspomagania Edukacji w Zakresie Algorytmów i Struktur Danych Liniowych – Struktur Dynamicznych",
     description="Silnik edukacyjny struktur danych",
     version="2.0"
 )
 
 # --- KONFIGURACJA CORS ---
-origins = ["*"] # W produkcji podaj konkretny adres, np. "http://localhost:5173"
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000")
+origins = [origin.strip() for origin in allowed_origins_env.split(",")]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Dla bezpieczeństwa możesz tu wpisać potem URL frontendu z Render.com
+    allow_origins=origins,  # Dla bezpieczeństwa możesz tu wpisać potem URL frontendu z Render.com
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -54,7 +55,7 @@ algorithm_db: Dict[str, AlgorithmModel] = {}
 
 @app.get("/")
 def root():
-    return {"status": "EduAlgo Backend is Running", "version": "2.0"}
+    return {"status": "ISWEZAiSL-SD Backend is Running", "version": "2.0"}
 
 # --- ENDPOINTY ALGORYTMÓW (CRUD) ---
 

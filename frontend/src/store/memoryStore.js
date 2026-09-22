@@ -1,9 +1,18 @@
 import { create } from 'zustand';
+import { applyNodeChanges, applyEdgeChanges } from '@xyflow/react';
 
 // Wyciągamy adres API ze zmiennych środowiskowych (Vite).
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export const useMemoryStore = create((set, get) => ({
+    nodes: [],
+    edges: [],
+    activeNodeId: null, // Śledzi, który węzeł aktualnie się wykonuje
+    updateNodeData: (nodeId, newData) => set((state) => ({
+        nodes: state.nodes.map(n =>
+            n.id === nodeId ? { ...n, data: { ...n.data, ...newData } } : n
+        )
+    })),
     memoryState: { heap: [], stack: {} },
     sandboxMemoryState: null,
     initialSandboxState: null,
@@ -18,7 +27,78 @@ export const useMemoryStore = create((set, get) => ({
     currentStepIndex: -1,
     highlightedAddress: null,
     setHighlightedAddress: (addr) => set({ highlightedAddress: addr }),
+
+    // --- FLAGI ODTWARZACZA ---
     isSandboxMode: false,
+    isPlaying: false,
+    setIsPlaying: (val) => set({ isPlaying: val }),
+
+    // TWARDY RESET: Zapobiega wyciekom stanu przy zmianie grafu
+    hardResetPlayback: () => {
+        set({ isPlaying: false, activeNodeId: null, currentStepIndex: -1 });
+        const { isSandboxMode, exitSandboxMode } = get();
+        if (isSandboxMode) exitSandboxMode();
+    },
+
+    onNodesChange: changes => set({ nodes: applyNodeChanges(changes, get().nodes) }),
+    onEdgesChange: changes => set({ edges: applyEdgeChanges(changes, get().edges) }),
+
+    loadAlgorithm: algo => {
+        get().hardResetPlayback(); // ZABEZPIECZENIE: Czyścimy stary stan przed załadowaniem nowego!
+
+        const generatedNodes = [];
+        const generatedEdges = [];
+        const startId = 'node-start';
+
+        generatedNodes.push({
+            id: startId,
+            type: 'startNode',
+            position: { x: 400, y: 50 },
+            data: { label: 'START' }
+        });
+
+        let prevId = startId;
+        let prevWasCondition = false; // Śledzenie węzłów warunkowych
+
+        if (algo.steps && Array.isArray(algo.steps)) {
+            algo.steps.forEach((step, idx) => {
+                const nodeId = `node-${idx}`;
+                const isCond = step.cmd === 'COMPARE';
+
+                generatedNodes.push({
+                    id: nodeId,
+                    type: isCond ? 'conditionNode' : 'actionNode',
+                    position: { x: 400, y: 150 + idx * 180 },
+                    data: { ...step, label: step.cmd }
+                });
+
+                const newEdge = {
+                    id: `edge-${prevId}-${nodeId}`,
+                    source: prevId,
+                    target: nodeId,
+                    type: 'smoothstep',
+                    animated: true
+                };
+
+                // ZABEZPIECZENIE: Wymuszamy ścieżkę "PRAWDA" dla starszych algorytmów z bazy
+                if (prevWasCondition) {
+                    newEdge.sourceHandle = 'true';
+                }
+
+                generatedEdges.push(newEdge);
+
+                prevId = nodeId;
+                prevWasCondition = isCond;
+            });
+        }
+
+        set({
+            nodes: generatedNodes,
+            edges: generatedEdges,
+            activeAlgorithm: algo,
+            currentStepIndex: -1
+        });
+    },
 
     // --- IMPLEMENTACJA LIVE SYNC ---
     setDraftAlgorithm: (algo, stepIndex) => set({
@@ -303,9 +383,13 @@ export const useMemoryStore = create((set, get) => ({
                     } else {
                         console.warn(`[COMPARE] Nie znaleziono zmiennej docelowej: ${targetVar}. Wynik (${resultInt}) przepadł.`);
                     }
-                    break;
+                    return resultBool; // <-- Kluczowe dla ścieżki rozgałęzień
             }
-        } catch (e) { console.error("Step Error:", e); }
+            return true; // <-- Kluczowe dla kontynuacji zwykłych akcji
+        } catch (e) {
+            console.error("Step Error:", e);
+            return false;
+        }
     },
 
     enterSandboxMode: async () => {
@@ -318,7 +402,7 @@ export const useMemoryStore = create((set, get) => ({
 
     exitSandboxMode: async () => {
         const originalState = get().memoryState;
-        set({ isSandboxMode: false, sandboxMemoryState: null, initialSandboxState: null });
+        set({ isSandboxMode: false, sandboxMemoryState: null, initialSandboxState: null, isPlaying: false });
         try {
             await fetch(`${API_URL}/api/memory/restore`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -364,16 +448,68 @@ export const useMemoryStore = create((set, get) => ({
         } catch (e) { console.error("Save error"); }
     },
 
-    loadAlgorithm: (algo) => { set({ activeAlgorithm: algo, currentStepIndex: -1 }); },
+    // --- ALIAS DLA STAREJ STRZAŁKI PLAY ---
+    nextAlgoStep: async () => { await get().nextGraphStep(); },
 
-    nextAlgoStep: async () => {
-        const { activeAlgorithm, currentStepIndex, runAlgorithmStep } = get();
-        if (!activeAlgorithm) return;
-        const nextIndex = currentStepIndex + 1;
-        if (nextIndex < activeAlgorithm.steps.length) {
-            await runAlgorithmStep(activeAlgorithm.steps[nextIndex]);
-            set({ currentStepIndex: nextIndex });
+    nextGraphStep: async () => {
+        const { nodes, edges, activeNodeId, runAlgorithmStep, isSandboxMode, enterSandboxMode } = get();
+        if (!nodes.length) return;
+
+        if (!isSandboxMode) await enterSandboxMode();
+
+        let currentNodeId = activeNodeId;
+
+        // ZABEZPIECZENIE: Auto-Restart, jeśli jesteśmy na końcu grafu i użytkownik klika Play
+        if (currentNodeId) {
+            const hasOutgoingEdges = edges.some(e => e.source === currentNodeId);
+            const isCond = nodes.find(n => n.id === currentNodeId)?.type === 'conditionNode';
+            // Jeśli węzeł nie ma wyjść, lub jest startNode bez wyjścia, resetujemy pointer
+            if (!hasOutgoingEdges && !isCond) {
+                currentNodeId = null;
+            }
+        }
+
+        // 1. WEJŚCIE W START
+        if (!currentNodeId) {
+            const startNode = nodes.find(n => n.type === 'startNode');
+            if (!startNode) return;
+            // POPRAWKA: START to tylko wizualny punkt. Nie jest prawdziwym krokiem kodu, więc index to -1.
+            set({ activeNodeId: startNode.id, currentStepIndex: -1 });
+            return;
+        }
+
+        const currentNode = nodes.find(n => n.id === currentNodeId);
+        if (!currentNode) {
+            get().hardResetPlayback();
+            return;
+        }
+
+        let conditionResult = true;
+        if (currentNode.type !== 'startNode') {
+             conditionResult = await runAlgorithmStep(currentNode.data);
+        }
+
+        let nextEdge = edges.find(e => e.source === currentNodeId);
+
+        if (currentNode.type === 'conditionNode') {
+             const handle = conditionResult ? 'true' : 'false';
+             nextEdge = edges.find(e => e.source === currentNodeId && e.sourceHandle === handle);
+        }
+
+        // 2. PRZEJŚCIE DO NASTĘPNEGO KROKU
+        if (nextEdge) {
+            const nextNodeIndex = nodes.findIndex(n => n.id === nextEdge.target);
+
+            // POPRAWKA (Synchronizacja przesunięcia):
+            // Węzeł START to nodes[0]. Pierwszy krok (np. ALLOC) to nodes[1].
+            // Translator chce indeks 0 dla pierwszego kroku, więc zawsze odejmujemy 1!
+            const realStepIndex = nextNodeIndex > 0 ? nextNodeIndex - 1 : -1;
+
+            set({ activeNodeId: nextEdge.target, currentStepIndex: realStepIndex });
+        } else {
+            console.log("Koniec algorytmu (Brak drogi). Zatrzymano symulator.");
+            // Zatrzymujemy zegar, ale NIE czyścimy activeNodeId, aby ostatni węzeł nadal świecił!
+            set({ isPlaying: false });
         }
     },
-
 }));

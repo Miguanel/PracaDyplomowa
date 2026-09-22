@@ -75,7 +75,7 @@ export default function App() {
       <main className="tutorial-canvas absolute inset-0 z-0 bg-gray-950 flex flex-col">
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none flex flex-col items-center">
              <Cpu size={250} />
-             <h1 className="text-7xl font-black tracking-widest mt-6">EDUALGO</h1>
+             <h1 className="text-7xl font-black tracking-widest mt-6">EduAlgo System</h1>
           </div>
           <EditorCanvas />
       </main>
