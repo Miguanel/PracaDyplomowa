@@ -21,15 +21,20 @@ app = FastAPI(
 )
 
 # --- KONFIGURACJA CORS ---
-allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000")
-origins = [origin.strip() for origin in allowed_origins_env.split(",")]
+# Lista dozwolonych adresów (dodaj zarówno lokalne środowisko, jak i produkcję)
+origins = [
+    "http://localhost:5173",            # Lokalne środowisko deweloperskie Vite
+    "http://localhost:3000",            # Alternatywne lokalne środowisko
+    "https://edualgo-app.onrender.com"  # Twój frontend na Renderze
+]
 
+# Konfiguracja CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # Dla bezpieczeństwa możesz tu wpisać potem URL frontendu z Render.com
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],                # Zezwala na wszystkie metody (GET, POST, PUT, DELETE, OPTIONS itp.)
+    allow_headers=["*"],                # Zezwala na wszystkie nagłówki
 )
 
 # --- REJESTRACJA ROUTERÓW ---
