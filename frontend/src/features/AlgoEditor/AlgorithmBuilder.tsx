@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useMemoryStore } from '../../store/memoryStore';
 import { ALGORITHMS_DB } from '../../data/algorithms';
 import { Save, Plus, BookOpen, Trash2, Settings, Play, SkipForward, RotateCcw } from 'lucide-react';
-import { ReactFlow, Controls, Background, addEdge, Handle, Position, Connection, Edge, Node } from '@xyflow/react';
+import { ReactFlow, Background, addEdge, Handle, Position, Connection, Edge, Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { INSTRUCTION_DEFS } from './instructionDefinitions';
 import clsx from 'clsx';

@@ -34,6 +34,7 @@ export const useMemoryStore = create((set, get) => ({
     setIsPlaying: (val) => set({ isPlaying: val }),
 
     // ZMIANA 1: Ekstrakcja logiki rysowania grafu, aby nie blokowała resetu
+    // ZMODYFIKOWANA: Buduje graf ze Startem oraz automatycznym węzłem STOP na końcu
     buildGraphFromAlgorithm: (algo) => {
         const generatedNodes = [{
             id: 'node-start',
@@ -65,17 +66,34 @@ export const useMemoryStore = create((set, get) => ({
                     animated: true
                 };
 
-                // ZABEZPIECZENIE: Wymuszamy ścieżkę "PRAWDA" dla starszych algorytmów z bazy
                 if (prevWasCondition) {
                     newEdge.sourceHandle = 'true';
                 }
 
                 generatedEdges.push(newEdge);
-
                 prevId = nodeId;
                 prevWasCondition = isCond;
             });
         }
+
+        // DODANE: Automatyczny węzeł STOP na samym końcu
+        const stopNodeId = 'node-stop';
+        const stopY = 150 + ((algo.steps ? algo.steps.length : 0) * 180);
+
+        generatedNodes.push({
+            id: stopNodeId,
+            type: 'actionNode', // Możesz zostawić jako actionNode lub stworzyć dedykowany stopNode
+            position: { x: 400, y: stopY },
+            data: { label: 'STOP', cmd: 'STOP', explanation: 'Koniec scenariusza. Algorytm wykonany pomyślnie.' }
+        });
+
+        generatedEdges.push({
+            id: `edge-${prevId}-${stopNodeId}`,
+            source: prevId,
+            target: stopNodeId,
+            type: 'smoothstep',
+            animated: true
+        });
 
         set({ nodes: generatedNodes, edges: generatedEdges, activeAlgorithm: algo });
     },
@@ -515,6 +533,13 @@ export const useMemoryStore = create((set, get) => ({
         const currentNode = nodes.find(n => n.id === currentNodeId);
         if (!currentNode) {
             await get().hardResetPlayback();
+            return;
+        }
+
+        // DODANE: Jeśli dotarliśmy do węzła STOP, natychmiast zatrzymujemy odtwarzanie i kończymy pętlę
+        if (currentNode.id === 'node-stop' || currentNode.data?.label === 'STOP') {
+            set({ isPlaying: false });
+            console.log("Dotarto do węzła STOP. Zatrzymano symulację.");
             return;
         }
 
