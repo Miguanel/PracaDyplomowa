@@ -511,15 +511,8 @@ export const useMemoryStore = create((set, get) => ({
 
         let currentNodeId = activeNodeId;
 
-        // ZABEZPIECZENIE: Auto-Restart, jeśli jesteśmy na końcu grafu i użytkownik klika Play
-        if (currentNodeId) {
-            const hasOutgoingEdges = edges.some(e => e.source === currentNodeId);
-            const isCond = nodes.find(n => n.id === currentNodeId)?.type === 'conditionNode';
-            // Jeśli węzeł nie ma wyjść, lub jest startNode bez wyjścia, resetujemy pointer
-            if (!hasOutgoingEdges && !isCond) {
-                currentNodeId = null;
-            }
-        }
+        // UWAGA: Usunięto wadliwy blok "Auto-Restart", który powodował zapętlanie
+        // po usunięciu węzła i zerwaniu krawędzi (nadpisywał currentNodeId = null).
 
         // 1. WEJŚCIE W START
         if (!currentNodeId) {
@@ -536,9 +529,9 @@ export const useMemoryStore = create((set, get) => ({
             return;
         }
 
-        // DODANE: Jeśli dotarliśmy do węzła STOP, natychmiast zatrzymujemy odtwarzanie i kończymy pętlę
+        // TWARDA BLOKADA: Jeśli dotarliśmy do węzła STOP, natychmiast zatrzymujemy odtwarzanie i NIE resetujemy wskaźnika.
         if (currentNode.id === 'node-stop' || currentNode.data?.label === 'STOP') {
-            set({ isPlaying: false });
+            set({ isPlaying: false, activeNodeId: currentNode.id });
             console.log("Dotarto do węzła STOP. Zatrzymano symulację.");
             return;
         }
