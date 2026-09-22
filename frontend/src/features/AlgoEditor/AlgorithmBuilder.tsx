@@ -21,7 +21,7 @@ const StartNode = ({ data, id }: any) => {
       <Handle
         type="source"
         position={Position.Bottom}
-        style={{ width: '12px', height: '12px', bottom: '-6px' }}
+        style={{ width: '12px', height: '12px' }}
         className="bg-green-300 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform"
       />
     </div>
@@ -52,7 +52,7 @@ const ActionNode = ({ data, id }: any) => {
       <Handle
           type="target"
           position={Position.Top}
-          style={{ width: '12px', height: '12px', top: '-6px' }}
+          style={{ width: '12px', height: '12px' }}
           className="bg-blue-500 border-2 border-gray-900 rounded-full cursor-pointer hover:bg-blue-400 hover:scale-125 transition-transform shadow-[0_0_8px_rgba(59,130,246,0.8)]"
         />
 
@@ -95,7 +95,7 @@ const ActionNode = ({ data, id }: any) => {
       <Handle
           type="source"
           position={Position.Bottom}
-          style={{ width: '12px', height: '12px', bottom: '-6px' }}
+          style={{ width: '12px', height: '12px' }}
           className="bg-blue-500 border-2 border-gray-900 rounded-full cursor-pointer hover:bg-blue-400 hover:scale-125 transition-transform shadow-[0_0_8px_rgba(59,130,246,0.8)]"
       />
     </div>
@@ -125,7 +125,7 @@ const ConditionNode = ({ data, id }: any) => {
       <Handle
           type="target"
           position={Position.Top}
-          style={{ width: '12px', height: '12px', top: '-6px' }}
+          style={{ width: '12px', height: '12px' }}
           className="bg-purple-500 border-2 border-gray-900 rounded-full cursor-pointer hover:bg-purple-400 hover:scale-125 transition-transform shadow-[0_0_8px_rgba(168,85,247,0.8)]"
         />
 
@@ -167,14 +167,14 @@ const ConditionNode = ({ data, id }: any) => {
           type="source"
           position={Position.Bottom}
           id="true"
-          style={{ width: '12px', height: '12px', bottom: '-6px', left: '30%' }}
+          style={{ width: '12px', height: '12px', left: '30%' }}
           className="bg-green-500 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform shadow-[0_0_8px_rgba(34,197,94,0.8)]"
       />
       <Handle
           type="source"
           position={Position.Bottom}
           id="false"
-          style={{ width: '12px', height: '12px', bottom: '-6px', left: '70%' }}
+          style={{ width: '12px', height: '12px', left: '70%' }}
           className="bg-red-500 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform shadow-[0_0_8px_rgba(239,68,68,0.8)]"
       />
 
