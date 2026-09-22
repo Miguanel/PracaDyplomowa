@@ -145,8 +145,8 @@ const ConditionNode = ({ data, id }: any) => {
           </div>
         )}
       </div>
-      <Handle type="source" position={Position.Bottom} id="true" className="w-4 h-4 bg-green-500 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform" style={{ left: '30%' }} />
-      <Handle type="source" position={Position.Bottom} id="false" className="w-4 h-4 bg-red-500 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform" style={{ left: '70%' }} />
+      <Handle type="source" position={Position.Bottom} id="true" className="w-6 h-6 bg-green-500 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform" style={{ left: '30%' }} />
+      <Handle type="source" position={Position.Bottom} id="false" className="w-6 h-6 bg-red-500 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform" style={{ left: '70%' }} />
       <div className="flex justify-between px-6 pb-1 text-[9px] font-bold text-gray-500 bg-gray-900">
           <span className="text-green-500/70">PRAWDA</span>
           <span className="text-red-500/70">FAŁSZ</span>
