@@ -19,6 +19,23 @@ export const useMemoryStore = create((set, get) => ({
 
     simulationError: null,
     setSimulationError: (msg) => set({ simulationError: msg }),
+    clearSimulationError: () => set({ simulationError: null }), // Zamyka modal błędu
+
+    // DODANE: Bezpieczne usuwanie kroku i automatyczna rekompilacja
+    removeAlgorithmStep: async (stepIndexToRemove) => {
+        const { activeAlgorithm, recompileSandboxAlgorithm, isPlaying, setIsPlaying } = get();
+        if (!activeAlgorithm || !activeAlgorithm.steps) return;
+
+        // Jeśli odtwarzacz działa, zatrzymujemy go przed modyfikacją
+        if (isPlaying) setIsPlaying(false);
+
+        // Wycinamy wybrany krok z tablicy
+        const newSteps = activeAlgorithm.steps.filter((_, idx) => idx !== stepIndexToRemove);
+        const updatedAlgo = { ...activeAlgorithm, steps: newSteps };
+
+        // Silnik automatycznie zresetuje pamięć, wejdzie w Sandbox i przebuduje graf
+        await recompileSandboxAlgorithm(updatedAlgo);
+    },
 
     codeHistory: [],
     isLoading: false,

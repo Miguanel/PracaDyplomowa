@@ -25,13 +25,36 @@ const StartNode = ({ data, id }: any) => {
 
 const ActionNode = ({ data, id }: any) => {
   const activeNodeId = useMemoryStore((s: any) => s.activeNodeId);
+  const removeAlgorithmStep = useMemoryStore((s: any) => s.removeAlgorithmStep);
   const isActive = activeNodeId === id;
+
+  // Wyciągamy indeks kroku z ID (np. "node-2" -> 2)
+  const stepIndex = parseInt(id.replace('node-', ''), 10);
+  const isDeletable = !isNaN(stepIndex);
+
+  const handleDelete = (e: React.MouseEvent) => {
+      e.stopPropagation(); // Zapobiega zaznaczeniu węzła przy kliknięciu w przycisk
+      if (isDeletable) {
+          removeAlgorithmStep(stepIndex);
+      }
+  };
 
   return (
     <div className={clsx(
-      "rounded-lg text-white w-64 flex flex-col overflow-hidden transition-all duration-300",
+      "relative rounded-lg text-white w-64 flex flex-col overflow-hidden transition-all duration-300 group",
       isActive ? "bg-gray-800 border-4 border-yellow-400 shadow-[0_0_25px_rgba(250,204,21,0.6)] scale-105 z-50" : "bg-gray-800 border-2 border-blue-500 shadow-xl shadow-blue-900/20"
     )}>
+      {/* Przycisk usuwania - pojawia się po najechaniu myszką */}
+      {isDeletable && (
+          <button
+              onClick={handleDelete}
+              className="absolute -top-2 -right-2 w-7 h-7 bg-red-600 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20 shadow-lg cursor-pointer border border-red-400"
+              title="Usuń ten krok"
+          >
+              <Trash2 size={14} />
+          </button>
+      )}
+
       <Handle type="target" position={Position.Top} className="w-3 h-3 bg-blue-400 border-2 border-gray-900" />
       <div className={clsx("px-3 py-2 flex justify-between items-center", isActive ? "bg-yellow-900/50 border-b border-yellow-500/50" : "bg-blue-900/50 border-b border-gray-700")}>
         <span className={clsx("font-bold text-xs", isActive ? "text-yellow-300" : "text-blue-300")}>{data.cmd}</span>
@@ -60,13 +83,33 @@ const ActionNode = ({ data, id }: any) => {
 
 const ConditionNode = ({ data, id }: any) => {
   const activeNodeId = useMemoryStore((s: any) => s.activeNodeId);
+  const removeAlgorithmStep = useMemoryStore((s: any) => s.removeAlgorithmStep);
   const isActive = activeNodeId === id;
+
+  const stepIndex = parseInt(id.replace('node-', ''), 10);
+  const isDeletable = !isNaN(stepIndex);
+
+  const handleDelete = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (isDeletable) {
+          removeAlgorithmStep(stepIndex);
+      }
+  };
 
   return (
     <div className={clsx(
-      "rounded-lg text-white w-64 flex flex-col overflow-hidden transition-all duration-300",
+      "relative rounded-lg text-white w-64 flex flex-col overflow-hidden transition-all duration-300 group",
       isActive ? "bg-gray-800 border-4 border-yellow-400 shadow-[0_0_25px_rgba(250,204,21,0.6)] scale-105 z-50" : "bg-gray-800 border-2 border-purple-500 shadow-xl shadow-purple-900/20"
     )}>
+      {isDeletable && (
+          <button
+              onClick={handleDelete}
+              className="absolute -top-2 -right-2 w-7 h-7 bg-red-600 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20 shadow-lg cursor-pointer border border-red-400"
+              title="Usuń ten krok"
+          >
+              <Trash2 size={14} />
+          </button>
+      )}
       <Handle type="target" position={Position.Top} className="w-3 h-3 bg-purple-400 border-2 border-gray-900" />
       <div className={clsx("px-3 py-2 flex justify-between items-center", isActive ? "bg-yellow-900/50 border-b border-yellow-500/50" : "bg-purple-900/50 border-b border-gray-700")}>
         <span className={clsx("font-bold text-xs", isActive ? "text-yellow-300" : "text-purple-300")}>WARUNEK (IF)</span>

@@ -7,6 +7,7 @@ import { Cpu, PlusCircle, RotateCcw, HelpCircle, Info, Layout } from 'lucide-rea
 import { TutorialOverlay } from './components/TutorialOverlay';
 import { FloatingWindow } from './components/FloatingWindow';
 import { WelcomeWindow } from './components/WelcomeWindow';
+import SimulationErrorModal from './components/SimulationErrorModal';
 import { initAnalytics, trackEvent } from './services/analytics';
 
 // ZREFAKTORYZOWANE OKNA MODULARNE
@@ -189,6 +190,8 @@ export default function App() {
             <div className="flex-1 text-xs text-gray-300 leading-relaxed overflow-y-auto custom-scrollbar italic border-l-2 border-indigo-900/30 pl-3">{activeAlgoDesc}</div>
         </div>
       </FloatingWindow>
+
+      <SimulationErrorModal />
 
     </div>
   );
