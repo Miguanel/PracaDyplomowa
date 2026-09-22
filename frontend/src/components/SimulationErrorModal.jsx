@@ -36,16 +36,16 @@ export default function SimulationErrorModal() {
                         </div>
                         <div>
                             <h3 className="text-sm font-bold tracking-wide text-red-500 uppercase">
-                                Krytyczny Błąd Pamięci (Segmentation Fault)
+                                Krytyczny Błąd Pamięci
                             </h3>
                             <p className="text-xs text-gray-400 mt-0.5">
-                                Maszyna wirtualna wykryła naruszenie struktury wskaźników. Symulacja została wstrzymana.
+                                Maszyna wirtualna wykryła naruszenie struktury wskaźników lub błąd logiczny. Symulacja została awaryjnie wstrzymana.
                             </p>
                         </div>
                     </div>
 
                     {/* Pole z technicznym komunikatem błędu (styl konsoli) */}
-                    <div className="bg-black border border-red-900/40 p-3.5 font-mono text-xs text-red-300 tracking-wide border-l-2 border-l-red-600">
+                    <div className="bg-black border border-red-900/40 p-3.5 font-mono text-xs text-red-300 tracking-wide border-l-2 border-l-red-600 break-words">
                         <span className="text-gray-500 mr-2">&gt;&gt;</span>
                         {simulationError}
                     </div>
