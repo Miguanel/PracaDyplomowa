@@ -22,7 +22,7 @@ const StartNode = ({ data, id }: any) => {
         type="source"
         position={Position.Bottom}
         style={{ width: '12px', height: '12px' }}
-        className="bg-green-300 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform"
+        className="bg-green-300 border-2 border-gray-900 rounded-full cursor-pointer"
       />
     </div>
   );
@@ -48,12 +48,12 @@ const ActionNode = ({ data, id }: any) => {
       "rounded-lg text-white w-64 flex flex-col transition-all duration-300",
       isActive ? "bg-gray-800 border-4 border-yellow-400 shadow-[0_0_25px_rgba(250,204,21,0.6)] scale-105 z-50" : "bg-gray-800 border-2 border-blue-500 shadow-xl shadow-blue-900/20"
     )}>
-      {/* Punkt wejścia (Top) */}
+      {/* Punkt wejścia (Top) - stabilny, bez animacji zmiany pozycji */}
       <Handle
           type="target"
           position={Position.Top}
           style={{ width: '12px', height: '12px' }}
-          className="bg-blue-500 border-2 border-gray-900 rounded-full cursor-pointer hover:bg-blue-400 hover:scale-125 transition-transform shadow-[0_0_8px_rgba(59,130,246,0.8)]"
+          className="bg-blue-500 border-2 border-gray-900 rounded-full cursor-pointer hover:bg-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.8)]"
         />
 
       {/* Pasek nagłówka z wbudowanym, wyraźnym przyciskiem usuwania (X) */}
@@ -91,12 +91,12 @@ const ActionNode = ({ data, id }: any) => {
         )}
       </div>
 
-      {/* Punkt wyjścia (Bottom) */}
+      {/* Punkt wyjścia (Bottom) - stabilny */}
       <Handle
           type="source"
           position={Position.Bottom}
           style={{ width: '12px', height: '12px' }}
-          className="bg-blue-500 border-2 border-gray-900 rounded-full cursor-pointer hover:bg-blue-400 hover:scale-125 transition-transform shadow-[0_0_8px_rgba(59,130,246,0.8)]"
+          className="bg-blue-500 border-2 border-gray-900 rounded-full cursor-pointer hover:bg-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.8)]"
       />
     </div>
   );
@@ -126,7 +126,7 @@ const ConditionNode = ({ data, id }: any) => {
           type="target"
           position={Position.Top}
           style={{ width: '12px', height: '12px' }}
-          className="bg-purple-500 border-2 border-gray-900 rounded-full cursor-pointer hover:bg-purple-400 hover:scale-125 transition-transform shadow-[0_0_8px_rgba(168,85,247,0.8)]"
+          className="bg-purple-500 border-2 border-gray-900 rounded-full cursor-pointer hover:bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.8)]"
         />
 
       <div className={clsx("px-3 py-2 flex justify-between items-center", isActive ? "bg-yellow-900/50 border-b border-yellow-500/50" : "bg-purple-900/50 border-b border-gray-700")}>
@@ -162,20 +162,20 @@ const ConditionNode = ({ data, id }: any) => {
         )}
       </div>
 
-      {/* Punkty Prawda / Fałsz na dole */}
+      {/* Punkty Prawda / Fałsz na dole - stabilne */}
       <Handle
           type="source"
           position={Position.Bottom}
           id="true"
           style={{ width: '12px', height: '12px', left: '30%' }}
-          className="bg-green-500 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform shadow-[0_0_8px_rgba(34,197,94,0.8)]"
+          className="bg-green-500 border-2 border-gray-900 rounded-full cursor-pointer shadow-[0_0_8px_rgba(34,197,94,0.8)]"
       />
       <Handle
           type="source"
           position={Position.Bottom}
           id="false"
           style={{ width: '12px', height: '12px', left: '70%' }}
-          className="bg-red-500 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform shadow-[0_0_8px_rgba(239,68,68,0.8)]"
+          className="bg-red-500 border-2 border-gray-900 rounded-full cursor-pointer shadow-[0_0_8px_rgba(239,68,68,0.8)]"
       />
 
       <div className="flex justify-between px-6 pb-1 text-[9px] font-bold text-gray-500 bg-gray-900">
