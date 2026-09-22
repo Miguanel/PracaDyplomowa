@@ -33,32 +33,17 @@ export const useMemoryStore = create((set, get) => ({
     isPlaying: false,
     setIsPlaying: (val) => set({ isPlaying: val }),
 
-    // TWARDY RESET: Zapobiega wyciekom stanu przy zmianie grafu
-    hardResetPlayback: () => {
-        set({ isPlaying: false, activeNodeId: null, currentStepIndex: -1 });
-        const { isSandboxMode, exitSandboxMode } = get();
-        if (isSandboxMode) exitSandboxMode();
-    },
-
-    onNodesChange: changes => set({ nodes: applyNodeChanges(changes, get().nodes) }),
-    onEdgesChange: changes => set({ edges: applyEdgeChanges(changes, get().edges) }),
-
-    loadAlgorithm: algo => {
-        get().hardResetPlayback(); // ZABEZPIECZENIE: Czyścimy stary stan przed załadowaniem nowego!
-
-        const generatedNodes = [];
-        const generatedEdges = [];
-        const startId = 'node-start';
-
-        generatedNodes.push({
-            id: startId,
+    // ZMIANA 1: Ekstrakcja logiki rysowania grafu, aby nie blokowała resetu
+    buildGraphFromAlgorithm: (algo) => {
+        const generatedNodes = [{
+            id: 'node-start',
             type: 'startNode',
             position: { x: 400, y: 50 },
             data: { label: 'START' }
-        });
-
-        let prevId = startId;
-        let prevWasCondition = false; // Śledzenie węzłów warunkowych
+        }];
+        const generatedEdges = [];
+        let prevId = 'node-start';
+        let prevWasCondition = false;
 
         if (algo.steps && Array.isArray(algo.steps)) {
             algo.steps.forEach((step, idx) => {
@@ -92,12 +77,26 @@ export const useMemoryStore = create((set, get) => ({
             });
         }
 
-        set({
-            nodes: generatedNodes,
-            edges: generatedEdges,
-            activeAlgorithm: algo,
-            currentStepIndex: -1
-        });
+        set({ nodes: generatedNodes, edges: generatedEdges, activeAlgorithm: algo });
+    },
+
+    // ZMIANA 1 cd.: Twardy reset asynchroniczny zapobiega wyciekom stanu
+    hardResetPlayback: async () => {
+        set({ isPlaying: false, activeNodeId: null, currentStepIndex: -1 });
+        const { isSandboxMode, exitSandboxMode } = get();
+        if (isSandboxMode) {
+            await exitSandboxMode();
+        }
+    },
+
+    onNodesChange: changes => set({ nodes: applyNodeChanges(changes, get().nodes) }),
+    onEdgesChange: changes => set({ edges: applyEdgeChanges(changes, get().edges) }),
+
+    // ZMIANA 1 cd.: Zabezpieczenie przed nakładaniem się grafów przy przełączaniu
+    loadAlgorithm: async (algo) => {
+        await get().hardResetPlayback();
+        get().buildGraphFromAlgorithm(algo);
+        set({ currentStepIndex: -1 });
     },
 
     // --- IMPLEMENTACJA LIVE SYNC ---
@@ -110,6 +109,24 @@ export const useMemoryStore = create((set, get) => ({
       activeAlgorithm: null,
       currentStepIndex: -1
     }),
+
+    // ZMIANA 3: Silnik rekompilacji w locie dla trybu Sandbox
+    recompileSandboxAlgorithm: async (updatedAlgo) => {
+        set({ isLoading: true });
+        try {
+            set({ activeAlgorithm: updatedAlgo });
+
+            // 1. Zerujemy maszynę i rysujemy zaktualizowany graf (nowe krawędzie)
+            await get().resetMemory();
+
+            // 2. Automatycznie wchodzimy z powrotem w tryb eksperymentalny
+            await get().enterSandboxMode();
+        } catch (error) {
+            console.error("Błąd rekompilacji Sandboxa:", error);
+        } finally {
+            set({ isLoading: false });
+        }
+    },
 
     fetchMemory: async () => {
         try {
@@ -133,51 +150,68 @@ export const useMemoryStore = create((set, get) => ({
         } catch (e) { console.error("Fetch error:", e); }
     },
 
+    // ZMIANA 2: Naprawiony przycisk RESTART (czyści backend, płótno, historię kodu i stany Sandboxa)
     resetMemory: async () => {
         set({ isLoading: true });
         const targetUrl = `${API_URL}/api/memory/reset`;
 
         try {
-          const res = await fetch(targetUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-          });
+            const res = await fetch(targetUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
 
-          const text = await res.text();
-          let parsed;
-          try {
-              parsed = text ? JSON.parse(text) : null;
-          } catch (e) {
-              parsed = null;
-          }
+            const text = await res.text();
+            let parsed;
+            try {
+                parsed = text ? JSON.parse(text) : null;
+            } catch (e) {
+                parsed = null;
+            }
 
-          const memoryData = parsed?.memory_dump ? parsed.memory_dump : parsed;
+            const memoryData = parsed?.memory_dump ? parsed.memory_dump : parsed;
 
-          const safeMemoryState = {
-              stack: memoryData?.stack || {},
-              heap: Array.isArray(memoryData?.heap) ? memoryData.heap : []
-          };
+            const safeMemoryState = {
+                stack: memoryData?.stack || {},
+                heap: Array.isArray(memoryData?.heap) ? memoryData.heap : []
+            };
 
-          set({
-              memoryState: safeMemoryState,
-              steps: [],
-              currentStepIndex: -1,
-              isPlaying: false,
-              comparisonResult: null
-          });
+            // Twardy reset pamięci i całkowite opuszczenie ewentualnych trybów brudnych
+            set({
+                memoryState: safeMemoryState,
+                sandboxMemoryState: null,
+                initialSandboxState: null,
+                isSandboxMode: false,
+                currentStepIndex: -1,
+                activeNodeId: null,
+                isPlaying: false,
+                codeHistory: []
+            });
+
+            // Odświeżenie płótna z zachowaniem obecnego algorytmu (jeśli jakiś był)
+            const currentAlgo = get().activeAlgorithm;
+            if (currentAlgo) {
+                get().buildGraphFromAlgorithm(currentAlgo);
+            } else {
+                set({ nodes: [], edges: [] });
+            }
+
         } catch (error) {
-          console.error("Błąd połączenia:", error);
-          set({
-              memoryState: { stack: {}, heap: [] },
-              steps: [],
-              currentStepIndex: -1,
-              isPlaying: false,
-              comparisonResult: null
-          });
+            console.error("Błąd połączenia:", error);
+            set({
+                memoryState: { stack: {}, heap: [] },
+                sandboxMemoryState: null,
+                initialSandboxState: null,
+                isSandboxMode: false,
+                currentStepIndex: -1,
+                activeNodeId: null,
+                isPlaying: false,
+                codeHistory: []
+            });
         } finally {
-          set({ isLoading: false });
+            set({ isLoading: false });
         }
-      },
+    },
 
     allocateNode: async (label, val) => {
         set({ isLoading: true, error: null });
@@ -480,7 +514,7 @@ export const useMemoryStore = create((set, get) => ({
 
         const currentNode = nodes.find(n => n.id === currentNodeId);
         if (!currentNode) {
-            get().hardResetPlayback();
+            await get().hardResetPlayback();
             return;
         }
 
