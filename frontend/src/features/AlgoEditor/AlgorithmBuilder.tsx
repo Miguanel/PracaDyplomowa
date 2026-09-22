@@ -28,12 +28,11 @@ const ActionNode = ({ data, id }: any) => {
   const removeAlgorithmStep = useMemoryStore((s: any) => s.removeAlgorithmStep);
   const isActive = activeNodeId === id;
 
-  // Wyciągamy indeks kroku z ID (np. "node-2" -> 2)
   const stepIndex = parseInt(id.replace('node-', ''), 10);
   const isDeletable = !isNaN(stepIndex);
 
   const handleDelete = (e: React.MouseEvent) => {
-      e.stopPropagation(); // Zapobiega zaznaczeniu węzła przy kliknięciu w przycisk
+      e.stopPropagation();
       if (isDeletable) {
           removeAlgorithmStep(stepIndex);
       }
@@ -41,24 +40,32 @@ const ActionNode = ({ data, id }: any) => {
 
   return (
     <div className={clsx(
-      "relative rounded-lg text-white w-64 flex flex-col overflow-hidden transition-all duration-300 group",
+      "rounded-lg text-white w-64 flex flex-col transition-all duration-300",
       isActive ? "bg-gray-800 border-4 border-yellow-400 shadow-[0_0_25px_rgba(250,204,21,0.6)] scale-105 z-50" : "bg-gray-800 border-2 border-blue-500 shadow-xl shadow-blue-900/20"
     )}>
-      {/* Przycisk usuwania - pojawia się po najechaniu myszką */}
-      {isDeletable && (
-          <button
-              onClick={handleDelete}
-              className="absolute -top-2 -right-2 w-7 h-7 bg-red-600 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20 shadow-lg cursor-pointer border border-red-400"
-              title="Usuń ten krok"
-          >
-              <Trash2 size={14} />
-          </button>
-      )}
+      {/* Większy, wygodny punkt wejścia */}
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="w-4 h-4 bg-blue-400 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform -top-2"
+      />
 
-      <Handle type="target" position={Position.Top} className="w-3 h-3 bg-blue-400 border-2 border-gray-900" />
+      {/* Pasek nagłówka z wbudowanym, wyraźnym przyciskiem usuwania (X) */}
       <div className={clsx("px-3 py-2 flex justify-between items-center", isActive ? "bg-yellow-900/50 border-b border-yellow-500/50" : "bg-blue-900/50 border-b border-gray-700")}>
-        <span className={clsx("font-bold text-xs", isActive ? "text-yellow-300" : "text-blue-300")}>{data.cmd}</span>
-        <span className="text-[9px] text-gray-500">{id}</span>
+        <div className="flex items-center gap-2">
+            <span className={clsx("font-bold text-xs", isActive ? "text-yellow-300" : "text-blue-300")}>{data.cmd}</span>
+            <span className="text-[9px] text-gray-500 font-mono">{id}</span>
+        </div>
+
+        {isDeletable && (
+            <button
+                onClick={handleDelete}
+                className="w-5 h-5 bg-red-900/80 hover:bg-red-600 text-red-200 hover:text-white rounded flex items-center justify-center transition-colors border border-red-700 cursor-pointer shadow-sm"
+                title="Usuń ten krok"
+            >
+                <span className="text-xs font-bold leading-none">×</span>
+            </button>
+        )}
       </div>
       <div className="p-3 flex flex-col gap-2 bg-gray-900/90">
         <div className="text-xs font-mono text-gray-300">
@@ -98,22 +105,30 @@ const ConditionNode = ({ data, id }: any) => {
 
   return (
     <div className={clsx(
-      "relative rounded-lg text-white w-64 flex flex-col overflow-hidden transition-all duration-300 group",
+      "rounded-lg text-white w-64 flex flex-col transition-all duration-300",
       isActive ? "bg-gray-800 border-4 border-yellow-400 shadow-[0_0_25px_rgba(250,204,21,0.6)] scale-105 z-50" : "bg-gray-800 border-2 border-purple-500 shadow-xl shadow-purple-900/20"
     )}>
-      {isDeletable && (
-          <button
-              onClick={handleDelete}
-              className="absolute -top-2 -right-2 w-7 h-7 bg-red-600 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20 shadow-lg cursor-pointer border border-red-400"
-              title="Usuń ten krok"
-          >
-              <Trash2 size={14} />
-          </button>
-      )}
-      <Handle type="target" position={Position.Top} className="w-3 h-3 bg-purple-400 border-2 border-gray-900" />
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="w-4 h-4 bg-purple-400 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform -top-2"
+      />
+
       <div className={clsx("px-3 py-2 flex justify-between items-center", isActive ? "bg-yellow-900/50 border-b border-yellow-500/50" : "bg-purple-900/50 border-b border-gray-700")}>
-        <span className={clsx("font-bold text-xs", isActive ? "text-yellow-300" : "text-purple-300")}>WARUNEK (IF)</span>
-        <span className="text-[9px] text-gray-500">{id}</span>
+        <div className="flex items-center gap-2">
+            <span className={clsx("font-bold text-xs", isActive ? "text-yellow-300" : "text-purple-300")}>WARUNEK (IF)</span>
+            <span className="text-[9px] text-gray-500 font-mono">{id}</span>
+        </div>
+
+        {isDeletable && (
+            <button
+                onClick={handleDelete}
+                className="w-5 h-5 bg-red-900/80 hover:bg-red-600 text-red-200 hover:text-white rounded flex items-center justify-center transition-colors border border-red-700 cursor-pointer shadow-sm"
+                title="Usuń ten krok"
+            >
+                <span className="text-xs font-bold leading-none">×</span>
+            </button>
+        )}
       </div>
       <div className="p-3 flex flex-col gap-2 bg-gray-900/90">
         <div className="text-xs font-mono text-center bg-black/50 py-1 rounded border border-gray-700">
@@ -130,8 +145,8 @@ const ConditionNode = ({ data, id }: any) => {
           </div>
         )}
       </div>
-      <Handle type="source" position={Position.Bottom} id="true" className="w-3 h-3 bg-green-500 border-2 border-gray-900" style={{ left: '30%' }} />
-      <Handle type="source" position={Position.Bottom} id="false" className="w-3 h-3 bg-red-500 border-2 border-gray-900" style={{ left: '70%' }} />
+      <Handle type="source" position={Position.Bottom} id="true" className="w-4 h-4 bg-green-500 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform" style={{ left: '30%' }} />
+      <Handle type="source" position={Position.Bottom} id="false" className="w-4 h-4 bg-red-500 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform" style={{ left: '70%' }} />
       <div className="flex justify-between px-6 pb-1 text-[9px] font-bold text-gray-500 bg-gray-900">
           <span className="text-green-500/70">PRAWDA</span>
           <span className="text-red-500/70">FAŁSZ</span>
