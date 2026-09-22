@@ -18,7 +18,12 @@ const StartNode = ({ data, id }: any) => {
       isActive ? "bg-green-600 border-4 border-green-300 shadow-[0_0_20px_rgba(74,222,128,0.8)] scale-110 z-50" : "bg-green-700 border-2 border-green-500 shadow-lg shadow-green-900/50"
     )}>
       {data.label || 'START'}
-      <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-green-300 border-2 border-gray-900" />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        style={{ width: '12px', height: '12px', bottom: '-6px' }}
+        className="bg-green-300 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform"
+      />
     </div>
   );
 };
@@ -43,11 +48,12 @@ const ActionNode = ({ data, id }: any) => {
       "rounded-lg text-white w-64 flex flex-col transition-all duration-300",
       isActive ? "bg-gray-800 border-4 border-yellow-400 shadow-[0_0_25px_rgba(250,204,21,0.6)] scale-105 z-50" : "bg-gray-800 border-2 border-blue-500 shadow-xl shadow-blue-900/20"
     )}>
-      {/* Większy, wygodny punkt wejścia */}
+      {/* Punkt wejścia (Top) */}
       <Handle
           type="target"
           position={Position.Top}
-          className="w-6 h-6 bg-blue-500 border-3 border-gray-900 rounded-full cursor-pointer hover:bg-blue-400 hover:scale-125 transition-all shadow-[0_0_10px_rgba(59,130,246,0.8)] -top-3"
+          style={{ width: '12px', height: '12px', top: '-6px' }}
+          className="bg-blue-500 border-2 border-gray-900 rounded-full cursor-pointer hover:bg-blue-400 hover:scale-125 transition-transform shadow-[0_0_8px_rgba(59,130,246,0.8)]"
         />
 
       {/* Pasek nagłówka z wbudowanym, wyraźnym przyciskiem usuwania (X) */}
@@ -67,6 +73,7 @@ const ActionNode = ({ data, id }: any) => {
             </button>
         )}
       </div>
+
       <div className="p-3 flex flex-col gap-2 bg-gray-900/90">
         <div className="text-xs font-mono text-gray-300">
             {data.var_name && <span>Var: <span className="text-yellow-400">{data.var_name}</span></span>}
@@ -83,7 +90,14 @@ const ActionNode = ({ data, id }: any) => {
           </div>
         )}
       </div>
-      <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-blue-400 border-2 border-gray-900" />
+
+      {/* Punkt wyjścia (Bottom) */}
+      <Handle
+          type="source"
+          position={Position.Bottom}
+          style={{ width: '12px', height: '12px', bottom: '-6px' }}
+          className="bg-blue-500 border-2 border-gray-900 rounded-full cursor-pointer hover:bg-blue-400 hover:scale-125 transition-transform shadow-[0_0_8px_rgba(59,130,246,0.8)]"
+      />
     </div>
   );
 };
@@ -111,7 +125,8 @@ const ConditionNode = ({ data, id }: any) => {
       <Handle
           type="target"
           position={Position.Top}
-          className="w-6 h-6 bg-blue-500 border-3 border-gray-900 rounded-full cursor-pointer hover:bg-blue-400 hover:scale-125 transition-all shadow-[0_0_10px_rgba(59,130,246,0.8)] -top-3"
+          style={{ width: '12px', height: '12px', top: '-6px' }}
+          className="bg-purple-500 border-2 border-gray-900 rounded-full cursor-pointer hover:bg-purple-400 hover:scale-125 transition-transform shadow-[0_0_8px_rgba(168,85,247,0.8)]"
         />
 
       <div className={clsx("px-3 py-2 flex justify-between items-center", isActive ? "bg-yellow-900/50 border-b border-yellow-500/50" : "bg-purple-900/50 border-b border-gray-700")}>
@@ -130,6 +145,7 @@ const ConditionNode = ({ data, id }: any) => {
             </button>
         )}
       </div>
+
       <div className="p-3 flex flex-col gap-2 bg-gray-900/90">
         <div className="text-xs font-mono text-center bg-black/50 py-1 rounded border border-gray-700">
           {data.var_name} <span className="text-purple-400">{data.field_name || '=='}</span> {data.val_payload?.rightValue ?? 'NULL'}
@@ -145,8 +161,23 @@ const ConditionNode = ({ data, id }: any) => {
           </div>
         )}
       </div>
-      <Handle type="source" position={Position.Bottom} id="true" className="w-6 h-6 bg-green-500 border-3 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform" style={{ left: '30%' }} />
-      <Handle type="source" position={Position.Bottom} id="false" className="w-6 h-6 bg-red-500 border-3 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform" style={{ left: '70%' }} />
+
+      {/* Punkty Prawda / Fałsz na dole */}
+      <Handle
+          type="source"
+          position={Position.Bottom}
+          id="true"
+          style={{ width: '12px', height: '12px', bottom: '-6px', left: '30%' }}
+          className="bg-green-500 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform shadow-[0_0_8px_rgba(34,197,94,0.8)]"
+      />
+      <Handle
+          type="source"
+          position={Position.Bottom}
+          id="false"
+          style={{ width: '12px', height: '12px', bottom: '-6px', left: '70%' }}
+          className="bg-red-500 border-2 border-gray-900 rounded-full cursor-pointer hover:scale-125 transition-transform shadow-[0_0_8px_rgba(239,68,68,0.8)]"
+      />
+
       <div className="flex justify-between px-6 pb-1 text-[9px] font-bold text-gray-500 bg-gray-900">
           <span className="text-green-500/70">PRAWDA</span>
           <span className="text-red-500/70">FAŁSZ</span>

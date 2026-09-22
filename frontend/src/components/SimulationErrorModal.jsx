@@ -18,7 +18,7 @@ export default function SimulationErrorModal() {
                     <div className="flex items-center gap-2">
                         <Terminal size={15} className="text-red-500" />
                         <span className="text-xs font-mono font-bold tracking-widest text-red-400 uppercase">
-                            SYSTEM_EXCEPTION // KERNEL_HALT
+                            VIRTUAL_MACHINE // FATAL_EXCEPTION
                         </span>
                     </div>
                     <div className="flex items-center gap-1.5">
