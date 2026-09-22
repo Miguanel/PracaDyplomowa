@@ -60,7 +60,7 @@ algorithm_db: Dict[str, AlgorithmModel] = {}
 
 @app.get("/")
 def root():
-    return {"status": "ISWEZAiSL-SD Backend is Running", "version": "2.0"}
+    return {"status": "Interaktywny System Wspomagania Edukacji w Zakresie Algorytmów i Struktur Danych Liniowych – Struktur Dynamicznych - Backend został uruchomiony", "version": "2.0"}
 
 # --- ENDPOINTY ALGORYTMÓW (CRUD) ---
 
