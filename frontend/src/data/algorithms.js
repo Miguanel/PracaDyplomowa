@@ -544,7 +544,8 @@ export const ALGORITHMS_DB = [
       { group: "Faza 2: Jazda i Wypadek", cmd: "ASSIGN_VAR", var_name: "osoba", source_var: "k1", explanation: "Pasażer siada na 1, myśląc że to karuzela." },
       { group: "Faza 2: Jazda i Wypadek", cmd: "STEP_FORWARD", var_name: "osoba", field_name: "next", explanation: "Jedzie na 2." },
       { group: "Faza 2: Jazda i Wypadek", cmd: "STEP_FORWARD", var_name: "osoba", field_name: "next", explanation: "Jedzie na 3." },
-      { group: "Faza 2: Jazda i Wypadek", cmd: "STEP_FORWARD", var_name: "osoba", field_name: "next", explanation: "Próbuje pojechać dalej... i wypada z trasy (Null Pointer)! Brak połączenia zniszczył system." }
+      { group: "Faza 2: Jazda i Wypadek", cmd: "STEP_FORWARD", var_name: "osoba", field_name: "next", explanation: "Próbuje pojechać dalej... za krzesełkiem 3 nie ma nic - 'osoba' wskazuje teraz na NULL (pustkę)." },
+      { group: "Faza 2: Jazda i Wypadek", cmd: "COMPARE", var_name: "osoba", field_name: "==", val_payload: { compareMode: "number", rightValue: 1 }, explanation: "Pasażer próbuje odczytać numer krzesełka (osoba->val)... ale 'osoba' to NULL! Program zalicza katastrofę (Null Pointer Dereference)." }
     ]
   },
 

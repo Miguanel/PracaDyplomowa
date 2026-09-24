@@ -6,7 +6,9 @@ import clsx from 'clsx';
 
 import { trackEvent } from '../services/analytics';
 
-const BACKEND_URL = 'https://edualgo-backend.onrender.com';
+// Ten sam adres co w memoryStore (VITE_API_URL) - wcześniej na sztywno wpisany Render,
+// przez co lokalnie / w Dockerze okno zawsze pokazywało "Silnik śpi".
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'https://edualgo-backend.onrender.com';
 
 export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
   const FIXED_WIDTH = 550;
@@ -85,16 +87,16 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
     <div className="absolute inset-0 flex flex-col bg-[#0a0a0c] overflow-hidden nodrag rounded-lg">
 
       {/* SEKTOR 1: NAGŁÓWEK META */}
-      <div className="shrink-0 p-6 bg-gradient-to-br from-blue-900/20 to-transparent border-b border-gray-800 relative z-10">
-        <div className="flex items-center gap-5">
+      <div className="shrink-0 p-4 sm:p-6 bg-gradient-to-br from-blue-900/20 to-transparent border-b border-gray-800 relative z-10">
+        <div className="flex items-center gap-3 sm:gap-5">
           <div className="relative shrink-0">
             <div className="absolute inset-0 bg-blue-500 blur-xl opacity-20 animate-pulse"></div>
-            <div className="relative p-4 bg-gray-900 border border-blue-500/50 rounded-2xl shadow-[0_0_20px_rgba(59,130,246,0.2)]">
-              <Cpu size={40} className="text-blue-400" />
+            <div className="relative p-3 sm:p-4 bg-gray-900 border border-blue-500/50 rounded-2xl shadow-[0_0_20px_rgba(59,130,246,0.2)]">
+              <Cpu size={40} className="text-blue-400 w-8 h-8 sm:w-10 sm:h-10" />
             </div>
           </div>
           <div>
-            <h2 className="text-2xl font-black tracking-tighter text-white bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-500">
+            <h2 className="text-xl sm:text-2xl font-black tracking-tighter text-white bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-500">
               EduAlgoSystem <span className="text-blue-500 text-lg">v2.0</span>
             </h2>
             <div className="flex items-center gap-2 mt-1">
@@ -106,16 +108,16 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
       </div>
 
       {/* SEKTOR 2: TREŚĆ */}
-      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6 space-y-5 relative z-0">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-4 sm:space-y-5 relative z-0">
 
         {/* DYNAMICZNY PANEL STATUSU BACKENDU */}
         <div className={clsx(
-            "flex items-center justify-between p-4 rounded-xl transition-all duration-700 ease-out border",
+            "flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 rounded-xl transition-all duration-700 ease-out border",
             backendStatus === 'ready'
               ? "bg-green-900/20 border-green-500/50 shadow-[0_0_20px_rgba(34,197,94,0.15)]"
               : "bg-gray-900/80 border-gray-800"
         )}>
-            <div className="flex flex-col gap-1 w-full max-w-[280px]">
+            <div className="flex flex-col gap-1 w-full sm:max-w-[280px]">
                 <div className="flex items-center gap-2">
                     <Server size={16} className={clsx(
                       backendStatus === 'ready' ? "text-green-400" : "text-gray-500"
@@ -139,7 +141,7 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
               {backendStatus === 'sleeping' && (
                 <button
                   onClick={handleWakeBackend}
-                  className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-black tracking-widest transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+                  className="w-full sm:w-auto justify-center flex items-center gap-2 px-3 py-2.5 sm:py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-black tracking-widest transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)]"
                 >
                   OBUDŹ BACKEND <ExternalLink size={12} />
                 </button>
@@ -171,7 +173,7 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
             </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3 sm:gap-4">
             <FeatureCard icon={<ShieldCheck className="text-green-400" size={16} />} title="Low-Level Memory" desc="Symulacja fizycznego zarządzania adresem w RAM." />
             <FeatureCard icon={<Code2 className="text-orange-400" size={16} />} title="Multi-Language" desc="Podgląd kodu w C++, Python, ASM i innych." />
             <FeatureCard icon={<Terminal className="text-indigo-400" size={16} />} title="Live Sandbox" desc="Bezpieczne testowanie własnych algorytmów." />
@@ -217,7 +219,7 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
                 trackEvent('tutorial', 'tutorial_skip', 'welcome_window');
                 onClose();
             }}
-            className="text-[10px] text-gray-500 hover:text-gray-300 font-bold tracking-widest uppercase transition-colors py-1"
+            className="text-[10px] text-gray-500 hover:text-gray-300 font-bold tracking-widest uppercase transition-colors py-2 sm:py-1"
         >
             Pomiń i wejdź do systemu
         </button>
@@ -255,4 +257,4 @@ const FeatureCard = ({ icon, title, desc }) => (
         </div>
         <p className="text-[9px] text-gray-500 leading-tight">{desc}</p>
     </div>
-);
+);

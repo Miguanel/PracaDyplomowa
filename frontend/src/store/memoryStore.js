@@ -79,7 +79,10 @@ export const useMemoryStore = create((set, get) => ({
                 };
 
                 if (prevWasCondition) {
+                    // Scenariusz z biblioteki jest liniowy: niezależnie od wyniku
+                    // warunku przechodzimy do kolejnego kroku (gałąź PRAWDA i FAŁSZ).
                     newEdge.sourceHandle = 'true';
+                    generatedEdges.push({ ...newEdge, id: `${newEdge.id}-false`, sourceHandle: 'false' });
                 }
 
                 generatedEdges.push(newEdge);
@@ -98,13 +101,18 @@ export const useMemoryStore = create((set, get) => ({
             data: { label: 'STOP', cmd: 'STOP', explanation: 'Koniec scenariusza. Algorytm wykonany pomyślnie.' }
         });
 
-        generatedEdges.push({
+        const stopEdge = {
             id: `edge-${prevId}-${stopNodeId}`,
             source: prevId,
             target: stopNodeId,
             type: 'smoothstep',
             animated: true
-        });
+        };
+        if (prevWasCondition) {
+            stopEdge.sourceHandle = 'true';
+            generatedEdges.push({ ...stopEdge, id: `${stopEdge.id}-false`, sourceHandle: 'false' });
+        }
+        generatedEdges.push(stopEdge);
 
         set({ nodes: generatedNodes, edges: generatedEdges, activeAlgorithm: algo });
     },
@@ -335,14 +343,35 @@ export const useMemoryStore = create((set, get) => ({
         console.log("▶ Krok:", instruction.cmd, instruction.var_name);
 
         // SYSTEM WALIDACJI WSKAŹNIKÓW - Weryfikacja stosu i sterty w locie
-        const getAddr = (v) => state.stack[v];
         const isValid = (addr) => state.heap.some(n => n.address === addr);
+        const isNullAddr = (addr) => !addr || addr === 'NULL';
+        // Rozwiązuje zmienną lub wyrażenie wskaźnikowe (np. "curr->next->prev") na adres
+        const getAddr = (expr) => {
+            if (!expr || expr === 'NULL') return null;
+            if (expr.startsWith('0x')) return expr;
+            const parts = expr.split('->');
+            let addr = state.stack[parts[0]];
+            for (let i = 1; i < parts.length; i++) {
+                const path = parts.slice(0, i).join('->');
+                if (isNullAddr(addr)) throw new Error(`Null Pointer Dereference: Odwołanie do pola '${parts[i]}' przez wskaźnik '${path}', który jest NULL.`);
+                const node = state.heap.find(n => n.address === addr);
+                if (!node) throw new Error(`Dangling Pointer: Wskaźnik '${path}' wskazuje na usunięty obszar pamięci (Use-After-Free)!`);
+                addr = node.data?.[parts[i]];
+            }
+            return isNullAddr(addr) ? null : addr;
+        };
         const requireValid = (varName) => {
             const addr = getAddr(varName);
             // OCHRONA 2: Null Pointer
             if (!addr) throw new Error(`Null Pointer Dereference: Odwołanie do wskaźnika '${varName}', który jest NULL (lub niezainicjowany).`);
             // OCHRONA 3 & 4: Dangling Pointer / Use-After-Free
             if (!isValid(addr)) throw new Error(`Dangling Pointer: Wskaźnik '${varName}' wskazuje na usunięty obszar pamięci (Use-After-Free)!`);
+            return addr;
+        };
+        // Źródło przypisania może być NULL (np. curr->next = curr->prev), ale nie może być wiszącym wskaźnikiem
+        const requireValidOrNull = (expr) => {
+            const addr = getAddr(expr);
+            if (addr && !isValid(addr)) throw new Error(`Dangling Pointer: Wskaźnik '${expr}' wskazuje na usunięty obszar pamięci (Use-After-Free)!`);
             return addr;
         };
 
@@ -361,14 +390,14 @@ export const useMemoryStore = create((set, get) => ({
                     requireValid(instruction.var_name);
                     // OCHRONA 6: Dangling Target Connection
                     if (instruction.source_var && instruction.source_var !== "NULL") {
-                        requireValid(instruction.source_var);
+                        requireValidOrNull(instruction.source_var);
                     }
                     await connectNodes(instruction.var_name, instruction.source_var || "NULL", instruction.field_name);
                     break;
 
                 case 'ASSIGN_VAR':
                     if (instruction.source_var && instruction.source_var !== "NULL") {
-                        requireValid(instruction.source_var);
+                        requireValidOrNull(instruction.source_var);
                     }
                     await get().setVariable(instruction.var_name, instruction.source_var || "NULL");
                     set(s => ({ codeHistory: [...s.codeHistory, `${instruction.var_name} = ${instruction.source_var || "NULL"};`] }));
@@ -447,7 +476,7 @@ export const useMemoryStore = create((set, get) => ({
                     const payloadCmp = instruction.val_payload || {};
                     const leftVar = instruction.var_name;
                     const operator = instruction.field_name;
-                    const targetVar = payloadCmp.targetNode || "temp";
+                    const targetVar = payloadCmp.targetNode;
                     const compareMode = payloadCmp.compareMode || "number";
                     const rightValueRaw = payloadCmp.rightValue;
 
@@ -456,13 +485,13 @@ export const useMemoryStore = create((set, get) => ({
                         requireValid(rightValueRaw);
                     }
 
-                    const leftAddrCmp = state.stack[leftVar];
+                    const leftAddrCmp = getAddr(leftVar);
                     const leftNode = state.heap.find(n => n.address === leftAddrCmp);
                     const leftVal = leftNode ? parseInt(leftNode.data.val) : 0;
 
                     let rightVal = 0;
                     if (compareMode === 'variable') {
-                        const rightAddrCmp = state.stack[rightValueRaw];
+                        const rightAddrCmp = getAddr(rightValueRaw);
                         const rightNode = state.heap.find(n => n.address === rightAddrCmp);
                         rightVal = rightNode ? parseInt(rightNode.data.val) : 0;
                     } else {
@@ -478,14 +507,14 @@ export const useMemoryStore = create((set, get) => ({
                     if (operator === '!=') resultBool = leftVal != rightVal;
 
                     const resultInt = resultBool ? 1 : 0;
-                    const targetAddrCmp = state.stack[targetVar];
-                    if (targetAddrCmp) {
-                         const response = await fetch(`${API_URL}/api/memory/write`, {
+                    const targetAddrCmp = targetVar ? state.stack[targetVar] : null;
+                    if (targetAddrCmp && isValid(targetAddrCmp)) {
+                         const response = await fetch(`${API_URL}/api/memory/write_value`, {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                source_address: targetAddrCmp,
+                                target_expression: targetVar,
                                 field_name: 'val',
-                                target_address: resultInt
+                                value: resultInt
                             })
                         });
                         if (!response.ok) {
@@ -574,7 +603,7 @@ export const useMemoryStore = create((set, get) => ({
             const startNode = nodes.find(n => n.type === 'startNode');
             if (!startNode) return;
             set({ activeNodeId: startNode.id, currentStepIndex: -1 });
-            return;
+            currentNodeId = startNode.id; // od razu przechodzimy do pierwszego kroku
         }
 
         const currentNode = nodes.find(n => n.id === currentNodeId);
@@ -623,4 +652,4 @@ export const useMemoryStore = create((set, get) => ({
             set({ isPlaying: false });
         }
     },
-}));
+}));

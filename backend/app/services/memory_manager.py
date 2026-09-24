@@ -19,6 +19,9 @@ class MemoryManager:
     def __init__(self):
         self.heap = {}
         self.stack = {}
+        # Licznik alokacji: adresy nie są ponownie używane po free(),
+        # więc nowy blok nigdy nie nadpisze istniejącego (wcześniej: len(heap) -> kolizja adresów)
+        self._alloc_counter = 0
 
     def resolve_pointer(self, expression: str) -> str:
         """
@@ -63,7 +66,11 @@ class MemoryManager:
         return current_address
 
     def malloc(self, size: int, label: str = "", x: int = None, y: int = None) -> str:
-        address = f"0x{100 + len(self.heap) * 8:x}"
+        address = f"0x{100 + self._alloc_counter * 8:x}"
+        while address in self.heap:
+            self._alloc_counter += 1
+            address = f"0x{100 + self._alloc_counter * 8:x}"
+        self._alloc_counter += 1
         block = MemoryBlock(address, size, label, x, y)
         self.heap[address] = block
 
@@ -135,6 +142,7 @@ class MemoryManager:
     def reset(self):
         self.heap = {}
         self.stack = {}
+        self._alloc_counter = 0
 
     def get_state(self):
         heap_list = []
@@ -163,6 +171,13 @@ class MemoryManager:
             block = MemoryBlock(addr, node["size"], node.get("label", ""), x, y)
             block.fields = node["data"].copy()
             self.heap[addr] = block
+        # Kontynuujemy numerację za najwyższym przywróconym adresem
+        for addr in self.heap:
+            try:
+                idx = (int(addr, 16) - 100) // 8 + 1
+                self._alloc_counter = max(self._alloc_counter, idx)
+            except ValueError:
+                pass
 
 
-memory_manager = MemoryManager()
+memory_manager = MemoryManager()

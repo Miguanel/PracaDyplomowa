@@ -1,6 +1,8 @@
 import { useRef } from 'react';
 import clsx from 'clsx';
-import { GripHorizontal, Maximize2, Minimize2, Pin, PinOff } from 'lucide-react';
+import { GripHorizontal, Maximize2, Minimize2, Pin, PinOff, ChevronUp, ChevronDown, X } from 'lucide-react';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { useMobileLayout } from '../store/mobileLayoutStore';
 
 export const FloatingWindow = ({
   id, title, icon,
@@ -10,8 +12,72 @@ export const FloatingWindow = ({
   headerControls, footerContent
 }) => {
   const windowRef = useRef(null);
+  const isMobile = useIsMobile();
+  const activePanel = useMobileLayout(s => s.activePanel);
+  const sheet = useMobileLayout(s => s.sheet);
+  const toggleFull = useMobileLayout(s => s.toggleFull);
+  const setSheet = useMobileLayout(s => s.setSheet);
 
   const bringToFront = () => zIndexManager(id);
+
+  // ==========================================================================
+  // TRYB MOBILNY: okno staje się panelem dokowanym (bottom sheet / panel boczny)
+  // ==========================================================================
+  if (isMobile) {
+    const isWelcome = id === 'welcome';
+    const isVisible = isWelcome || (activePanel === id && sheet !== 'closed');
+
+    return (
+      <div
+        ref={windowRef}
+        data-id={id}
+        aria-hidden={!isVisible}
+        style={{ zIndex: isWelcome ? z : 200 }}
+        className={clsx(
+          "floating-window flex flex-col bg-gray-900 overflow-hidden",
+          isWelcome ? "mobile-welcome" : "mobile-sheet",
+          !isVisible && "hidden",
+          className
+        )}
+      >
+        <div className="mobile-sheet-header shrink-0 bg-gray-950 border-b border-gray-800">
+          {!isWelcome && <div className="mx-auto mt-1.5 mb-0.5 h-1 w-10 rounded-full bg-gray-700" aria-hidden="true" />}
+          <div className="flex items-center justify-between gap-2 px-3 py-1.5 min-h-[40px]">
+            <div className="flex items-center gap-1.5 min-w-0 text-[11px] font-bold uppercase tracking-widest text-gray-300">
+              <span className="shrink-0">{icon}</span>
+              <span className="truncate">{title}</span>
+            </div>
+            {!isWelcome && (
+              <div className="flex items-center gap-1 shrink-0">
+                <button onClick={toggleFull} className="mobile-icon-btn" aria-label={sheet === 'full' ? "Zmniejsz panel" : "Powiększ panel"}>
+                  {sheet === 'full' ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+                </button>
+                <button onClick={() => setSheet('closed')} className="mobile-icon-btn" aria-label="Schowaj panel">
+                  <X size={18} />
+                </button>
+              </div>
+            )}
+          </div>
+          {headerControls && (
+            <div className="mobile-header-controls nodrag flex items-center justify-center gap-2 px-3 pb-2 overflow-x-auto">
+              {headerControls}
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 flex flex-col relative min-h-0 w-full bg-black/40">
+          <div className="flex-1 flex flex-col min-h-0 w-full overflow-hidden relative">
+            {children}
+          </div>
+          {footerContent && (
+            <div className="shrink-0 w-full bg-gray-950 border-t border-gray-800 relative z-20">
+              {footerContent}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // --- FIZYKA DRAG ---
   const handleDragStart = (e) => {
@@ -31,13 +97,17 @@ export const FloatingWindow = ({
     };
 
     const handleDrop = () => {
-      onPosChange(id, parseFloat(windowRef.current.style.left) || x, parseFloat(windowRef.current.style.top) || y, true);
-      document.removeEventListener('mousemove', handleDrag);
-      document.removeEventListener('mouseup', handleDrop);
+      if (windowRef.current) {
+        onPosChange(id, parseFloat(windowRef.current.style.left) || x, parseFloat(windowRef.current.style.top) || y, true);
+      }
+      document.removeEventListener('pointermove', handleDrag);
+      document.removeEventListener('pointerup', handleDrop);
+      document.removeEventListener('pointercancel', handleDrop);
     };
 
-    document.addEventListener('mousemove', handleDrag);
-    document.addEventListener('mouseup', handleDrop);
+    document.addEventListener('pointermove', handleDrag);
+    document.addEventListener('pointerup', handleDrop);
+    document.addEventListener('pointercancel', handleDrop);
   };
 
   // --- FIZYKA RESIZE ---
@@ -69,16 +139,19 @@ export const FloatingWindow = ({
     };
 
     const handleResizeDrop = () => {
+      document.removeEventListener('pointermove', handleResizeDrag);
+      document.removeEventListener('pointerup', handleResizeDrop);
+      document.removeEventListener('pointercancel', handleResizeDrop);
+      if (!windowRef.current) return;
       onSizeChange(id,
          { w: parseFloat(windowRef.current.style.width) || w, h: parseFloat(windowRef.current.style.height) || h },
          { x: parseFloat(windowRef.current.style.left) || x, y: parseFloat(windowRef.current.style.top) || y },
       true);
-      document.removeEventListener('mousemove', handleResizeDrag);
-      document.removeEventListener('mouseup', handleResizeDrop);
     };
 
-    document.addEventListener('mousemove', handleResizeDrag);
-    document.addEventListener('mouseup', handleResizeDrop);
+    document.addEventListener('pointermove', handleResizeDrag);
+    document.addEventListener('pointerup', handleResizeDrop);
+    document.addEventListener('pointercancel', handleResizeDrop);
   };
 
   return (
@@ -102,7 +175,7 @@ export const FloatingWindow = ({
         className
       )}
     >
-      <div onMouseDown={handleDragStart} className={clsx("shrink-0 px-3 py-1.5 bg-gray-950/80 border-b border-gray-800 flex justify-between items-center transition-colors z-20 relative", pinned ? "cursor-not-allowed" : "cursor-move hover:bg-gray-900")}>
+      <div onPointerDown={handleDragStart} style={{ touchAction: pinned ? 'auto' : 'none' }} className={clsx("shrink-0 px-3 py-1.5 bg-gray-950/80 border-b border-gray-800 flex justify-between items-center transition-colors z-20 relative", pinned ? "cursor-not-allowed" : "cursor-move hover:bg-gray-900")}>
          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 pointer-events-none">
             <GripHorizontal size={14} className={pinned ? "text-red-900/50" : "text-gray-600"} />
             <span className="flex items-center gap-1.5">{icon} {title}</span>
@@ -142,12 +215,12 @@ export const FloatingWindow = ({
 
       {!minimized && !pinned && (
         <>
-          <div onMouseDown={(e) => handleResizeStart(e, 'se')} className="resizer absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-[100] opacity-50 hover:opacity-100"><div className="w-full h-full border-b-2 border-r-2 border-gray-500" /></div>
-          <div onMouseDown={(e) => handleResizeStart(e, 'sw')} className="resizer absolute bottom-0 left-0 w-4 h-4 cursor-sw-resize z-[100] opacity-50 hover:opacity-100"><div className="w-full h-full border-b-2 border-l-2 border-gray-500" /></div>
-          <div onMouseDown={(e) => handleResizeStart(e, 'nw')} className="resizer absolute top-0 left-0 w-4 h-4 cursor-nw-resize z-[100] opacity-50 hover:opacity-100"><div className="w-full h-full border-t-2 border-l-2 border-gray-500" /></div>
-          <div onMouseDown={(e) => handleResizeStart(e, 'ne')} className="resizer absolute top-0 right-0 w-4 h-4 cursor-ne-resize z-[100] opacity-50 hover:opacity-100"><div className="w-full h-full border-t-2 border-r-2 border-gray-500" /></div>
+          <div style={{ touchAction: 'none' }} onPointerDown={(e) => handleResizeStart(e, 'se')} className="resizer absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-[100] opacity-50 hover:opacity-100"><div className="w-full h-full border-b-2 border-r-2 border-gray-500" /></div>
+          <div style={{ touchAction: 'none' }} onPointerDown={(e) => handleResizeStart(e, 'sw')} className="resizer absolute bottom-0 left-0 w-4 h-4 cursor-sw-resize z-[100] opacity-50 hover:opacity-100"><div className="w-full h-full border-b-2 border-l-2 border-gray-500" /></div>
+          <div style={{ touchAction: 'none' }} onPointerDown={(e) => handleResizeStart(e, 'nw')} className="resizer absolute top-0 left-0 w-4 h-4 cursor-nw-resize z-[100] opacity-50 hover:opacity-100"><div className="w-full h-full border-t-2 border-l-2 border-gray-500" /></div>
+          <div style={{ touchAction: 'none' }} onPointerDown={(e) => handleResizeStart(e, 'ne')} className="resizer absolute top-0 right-0 w-4 h-4 cursor-ne-resize z-[100] opacity-50 hover:opacity-100"><div className="w-full h-full border-t-2 border-r-2 border-gray-500" /></div>
         </>
       )}
     </div>
   );
-};
+};

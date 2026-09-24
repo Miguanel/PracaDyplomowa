@@ -11,6 +11,7 @@ export const PlayerWindow = ({ windowState, windowActions, zIndexManager }) => {
   const {
     activeAlgorithm,
     currentStepIndex,
+    activeNodeId,
     nextAlgoStep,
     resetMemory,
     isLoading,
@@ -30,12 +31,14 @@ export const PlayerWindow = ({ windowState, windowActions, zIndexManager }) => {
     let interval;
     if (isPlaying && activeAlgorithm) {
       interval = window.setInterval(() => {
-        if (currentStepIndex < activeAlgorithm.steps.length - 1) nextAlgoStep();
+        const s = useMemoryStore.getState();
+        const finished = s.activeNodeId === 'node-stop' || s.currentStepIndex >= activeAlgorithm.steps.length;
+        if (!finished && !s.simulationError) nextAlgoStep();
         else setIsPlaying(false);
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isPlaying, activeAlgorithm, currentStepIndex, nextAlgoStep]);
+  }, [isPlaying, activeAlgorithm, nextAlgoStep]);
 
   // Autoscroll do aktywnego kroku
   useEffect(() => {
@@ -81,7 +84,8 @@ export const PlayerWindow = ({ windowState, windowActions, zIndexManager }) => {
     }
   };
 
-  const isDone = currentStepIndex >= (activeAlgorithm?.steps.length || 0) - 1;
+  // Algorytm jest zakończony dopiero po wykonaniu OSTATNIEGO kroku (dotarcie do węzła STOP)
+  const isDone = !!activeAlgorithm && (activeNodeId === 'node-stop' || currentStepIndex >= activeAlgorithm.steps.length);
 
   // ==========================================================================
   // WIDOK: NAGŁÓWEK
@@ -199,8 +203,8 @@ export const PlayerWindow = ({ windowState, windowActions, zIndexManager }) => {
       <div className="shrink-0 w-full h-1.5 bg-gray-950 z-10">
           {activeAlgorithm && activeAlgorithm.steps.length > 0 && (
              <div
-                 className={clsx("h-full transition-all duration-300 ease-out", currentStepIndex === activeAlgorithm.steps.length - 1 ? "bg-green-500 shadow-[0_0_8px_#22c55e]" : "bg-blue-500 shadow-[0_0_8px_#3b82f6]")}
-                 style={{ width: `${((currentStepIndex + 1) / activeAlgorithm.steps.length) * 100}%` }}
+                 className={clsx("h-full transition-all duration-300 ease-out", isDone ? "bg-green-500 shadow-[0_0_8px_#22c55e]" : "bg-blue-500 shadow-[0_0_8px_#3b82f6]")}
+                 style={{ width: `${Math.min(100, (Math.min(currentStepIndex, activeAlgorithm.steps.length) / activeAlgorithm.steps.length) * 100)}%` }}
              ></div>
           )}
       </div>
@@ -224,4 +228,4 @@ export const PlayerWindow = ({ windowState, windowActions, zIndexManager }) => {
       {ExpandedView}
     </FloatingWindow>
   );
-};
+};

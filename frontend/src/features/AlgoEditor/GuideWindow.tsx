@@ -26,8 +26,9 @@ export const GuideWindow = ({ windowState, windowActions, zIndexManager }) => {
   }, [currentStepIndex, activeAlgorithm, windowState?.h, windowState?.minimized]);
 
   const currentStep = activeAlgorithm?.steps[currentStepIndex];
-  const activePhaseName = currentStep?.group || "Inicjalizacja";
-  const currentExplanation = currentStep?.explanation || "Oczekiwanie na instrukcje...";
+  const isFinished = !!activeAlgorithm && currentStepIndex >= activeAlgorithm.steps.length;
+  const activePhaseName = isFinished ? "Zakończono" : (currentStep?.group || "Inicjalizacja");
+  const currentExplanation = isFinished ? "Algorytm wykonany w całości." : (currentStep?.explanation || "Oczekiwanie na instrukcje...");
 
   // ==========================================================================
   // WIDOK: NAGŁÓWEK
@@ -42,7 +43,7 @@ export const GuideWindow = ({ windowState, windowActions, zIndexManager }) => {
             </div>
         </div>
         <div className="text-[10px] font-mono text-gray-400 bg-black/40 px-2 py-1 rounded border border-gray-800">
-            {currentStepIndex + 1} / {activeAlgorithm.steps.length}
+            {Math.min(currentStepIndex + 1, activeAlgorithm.steps.length)} / {activeAlgorithm.steps.length}
         </div>
     </div>
   ) : null;
@@ -158,4 +159,4 @@ export const GuideWindow = ({ windowState, windowActions, zIndexManager }) => {
       {ExpandedView}
     </FloatingWindow>
   );
-};
+};

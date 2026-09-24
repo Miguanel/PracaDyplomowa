@@ -6,6 +6,7 @@ import { ReactFlow, Background, addEdge, Handle, Position, Connection, Edge, Nod
 import '@xyflow/react/dist/style.css';
 import { INSTRUCTION_DEFS } from './instructionDefinitions';
 import clsx from 'clsx';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 // --- 1. DEFINICJE AUTORSKICH WĘZŁÓW Z EFEKTEM GLOW ---
 
@@ -269,6 +270,15 @@ export const AlgorithmBuilder = () => {
 
   const selectedNode = nodes.find(n => n.id === selectedNodeId);
 
+  // TRYB MOBILNY: zamiast panelu bocznego 320px + grafu (brak miejsca) - przełącznik zakładek
+  const isMobile = useIsMobile();
+  const [mobileTab, setMobileTab] = useState<'edit' | 'graph'>('edit');
+  useEffect(() => {
+    if (isMobile && selectedNodeId) setMobileTab('edit');
+  }, [isMobile, selectedNodeId]);
+  const showSidebar = !isMobile || mobileTab === 'edit';
+  const showGraph = !isMobile || mobileTab === 'graph';
+
   return (
     <div className="flex flex-col w-full h-full bg-gray-950 text-white font-sans overflow-hidden">
       <div className="bg-gray-900 border-b border-gray-800 p-2 flex justify-center gap-2 shadow-lg z-20">
@@ -279,8 +289,23 @@ export const AlgorithmBuilder = () => {
         <button onClick={() => useMemoryStore.getState().nextGraphStep()} disabled={isPlaying} className="p-2 bg-gray-800 hover:bg-gray-700 text-white disabled:opacity-50 rounded"><SkipForward size={16} /></button>
       </div>
 
+      {isMobile && (
+        <div className="shrink-0 grid grid-cols-2 bg-gray-950 border-b border-gray-800 text-[11px] font-bold uppercase tracking-wider">
+          {([['edit', 'Edycja bloków'], ['graph', `Graf (${nodes.length})`]] as const).map(([tab, label]) => (
+            <button
+              key={tab}
+              onClick={() => setMobileTab(tab)}
+              className={`!rounded-none !border-0 !border-b-2 py-2.5 ${mobileTab === tab ? '!border-blue-500 text-white !bg-gray-900' : '!border-transparent text-gray-500 !bg-transparent'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-80 flex flex-col bg-gray-900 border-r border-gray-800 shadow-2xl z-10 shrink-0">
+        {showSidebar && (
+        <div className={isMobile ? "w-full flex flex-col bg-gray-900 z-10 min-h-0" : "w-80 flex flex-col bg-gray-900 border-r border-gray-800 shadow-2xl z-10 shrink-0"}>
 
           {selectedNode ? (
             <div className="p-4 flex flex-col gap-4 animate-in fade-in slide-in-from-left-4 h-full overflow-y-auto">
@@ -416,7 +441,10 @@ export const AlgorithmBuilder = () => {
           )}
         </div>
 
+        )}
+
         {/* GŁÓWNE PŁÓTNO (React Flow Canvas) */}
+        {showGraph && (
         <div className="flex-1 h-full relative">
           <ReactFlow
             nodes={nodes}
@@ -437,7 +465,8 @@ export const AlgorithmBuilder = () => {
 
           </ReactFlow>
         </div>
+        )}
       </div>
     </div>
   );
-};
+};

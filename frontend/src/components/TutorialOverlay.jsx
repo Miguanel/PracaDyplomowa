@@ -4,10 +4,13 @@ import { X, ChevronRight, ChevronLeft, Check, Info } from 'lucide-react';
 import clsx from 'clsx';
 
 import { trackEvent } from '../services/analytics';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { useMobileLayout } from '../store/mobileLayoutStore';
 
 export const TutorialOverlay = ({ onComplete, windowsData, zIndexManager }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRect, setTargetRect] = useState(null);
+  const isMobile = useIsMobile();
 
   const steps = useMemo(() => [
     {
@@ -56,9 +59,11 @@ export const TutorialOverlay = ({ onComplete, windowsData, zIndexManager }) => {
       target: 'header.tutorial-header > div:last-child',
       placement: 'bottom',
       title: '7. Zarządzanie Terminalem',
-      content: 'Jeśli okna się pogubią, kliknij "UŁÓŻ OKNA". Przycisk "RESTART" całkowicie czyści pamięć i przywraca system do zera.'
+      content: isMobile
+        ? 'Panele przełączasz dolnym paskiem - ponowne dotknięcie aktywnej zakładki chowa panel i odsłania całą wizualizację. Przycisk RESTART (czerwony) czyści pamięć, a znak zapytania uruchamia ten poradnik ponownie.'
+        : 'Jeśli okna się pogubią, kliknij "UŁÓŻ OKNA". Przycisk "RESTART" całkowicie czyści pamięć i przywraca system do zera.'
     }
-  ], []);
+  ], [isMobile]);
 
   const step = steps[currentStep];
 
@@ -73,7 +78,13 @@ export const TutorialOverlay = ({ onComplete, windowsData, zIndexManager }) => {
     if (targetId && zIndexManager) {
       zIndexManager(targetId);
     }
-  }, [targetId, zIndexManager]);
+    // Na telefonie okna są panelami - wysuwamy panel, o którym mowa w danym kroku
+    if (targetId && isMobile) {
+      const layout = useMobileLayout.getState();
+      layout.openPanel(targetId);
+      if (layout.sheet === 'full') layout.setSheet('half');
+    }
+  }, [targetId, zIndexManager, isMobile]);
 
   const measureTarget = useCallback(() => {
     if (step.target === 'center') {
@@ -91,9 +102,14 @@ export const TutorialOverlay = ({ onComplete, windowsData, zIndexManager }) => {
 
   useEffect(() => {
     measureTarget();
+    // ponowny pomiar po animacji wysuwania panelu (tryb mobilny)
+    const t = window.setTimeout(measureTarget, 300);
     window.addEventListener('resize', measureTarget);
-    return () => window.removeEventListener('resize', measureTarget);
-  }, [measureTarget, windowsData]);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener('resize', measureTarget);
+    };
+  }, [measureTarget, windowsData, isMobile]);
 
   const isCenter = step.target === 'center' || !targetRect;
 
@@ -104,7 +120,21 @@ export const TutorialOverlay = ({ onComplete, windowsData, zIndexManager }) => {
   let popoverTop = window.innerHeight / 2;
   let popoverTransform = 'translate(-50%, -50%)';
 
-  if (!isCenter && targetRect) {
+  const cardWidth = isMobile ? Math.min(340, window.innerWidth - 24) : 320;
+
+  if (isMobile && !isCenter && targetRect) {
+    // TELEFON: dymek na całą szerokość, nad albo pod podświetlonym elementem
+    popoverLeft = (window.innerWidth - cardWidth) / 2;
+    const spaceAbove = targetRect.top;
+    const spaceBelow = window.innerHeight - targetRect.bottom;
+    if (spaceBelow >= spaceAbove) {
+      popoverTop = targetRect.bottom + 12;
+      popoverTransform = 'none';
+    } else {
+      popoverTop = Math.max(8, targetRect.top - 12);
+      popoverTransform = 'translateY(-100%)';
+    }
+  } else if (!isCenter && targetRect) {
     const pWidth = 320;
     const gap = 30;
 
@@ -192,11 +222,13 @@ export const TutorialOverlay = ({ onComplete, windowsData, zIndexManager }) => {
       {/* TUTORIAL CARD */}
       <div
         className={clsx(
-            "absolute bg-gray-950 border border-blue-500/50 shadow-[0_0_60px_rgba(0,0,0,0.9)] rounded-2xl p-6 w-[320px] pointer-events-auto transition-all duration-500 ease-out",
-            isCenter ? "opacity-100 scale-110" : "opacity-100 scale-100"
+            "absolute bg-gray-950 border border-blue-500/50 shadow-[0_0_60px_rgba(0,0,0,0.9)] rounded-2xl pointer-events-auto transition-all duration-500 ease-out",
+            isMobile ? "p-4" : "p-6",
+            isCenter && !isMobile ? "opacity-100 scale-110" : "opacity-100 scale-100"
         )}
         style={{
-          left: `${popoverLeft}px`,
+          width: `${cardWidth}px`,
+          left: isCenter ? `${window.innerWidth / 2}px` : `${popoverLeft}px`,
           top: `${popoverTop}px`,
           transform: popoverTransform,
         }}
@@ -222,7 +254,7 @@ export const TutorialOverlay = ({ onComplete, windowsData, zIndexManager }) => {
             </div>
 
             <h3 className="text-xl font-black text-white mb-2 tracking-tight">{step.title}</h3>
-            <p className="text-[13px] text-gray-400 leading-relaxed mb-8">
+            <p className={clsx("text-[13px] text-gray-400 leading-relaxed", isMobile ? "mb-5" : "mb-8")}>
                 {step.content}
             </p>
 
@@ -270,4 +302,4 @@ export const TutorialOverlay = ({ onComplete, windowsData, zIndexManager }) => {
       </div>
     </div>
   );
-};
+};

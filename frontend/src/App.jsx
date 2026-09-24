@@ -1,6 +1,7 @@
 // src/App.jsx
 import './App.css';
 import { useState, useEffect } from 'react';
+import clsx from 'clsx';
 import { EditorCanvas } from './features/StructureEditor/EditorCanvas';
 import { useMemoryStore } from './store/memoryStore';
 import { Cpu, PlusCircle, RotateCcw, HelpCircle, Info, Layout } from 'lucide-react';
@@ -9,6 +10,9 @@ import { FloatingWindow } from './components/FloatingWindow';
 import { WelcomeWindow } from './components/WelcomeWindow';
 import SimulationErrorModal from './components/SimulationErrorModal';
 import { initAnalytics, trackEvent } from './services/analytics';
+import { MobileNav } from './components/MobileNav';
+import { useIsMobile } from './hooks/useIsMobile';
+import { useMobileLayout } from './store/mobileLayoutStore';
 
 // ZREFAKTORYZOWANE OKNA MODULARNE
 import { PlayerWindow } from './features/AlgoEditor/PlayerWindow';
@@ -26,6 +30,9 @@ export default function App() {
     windowsData, intelligentLayout, initializeLayout, bringToFront, updatePos,
     updateSize, togglePin, toggleMinimize, applySmartClamp
   } = useWindowManager();
+
+  const isMobile = useIsMobile();
+  const mobileSheet = useMobileLayout(s => s.sheet);
 
   const windowActions = {
     updatePos, updateSize, togglePin, toggleMinimize
@@ -46,14 +53,20 @@ export default function App() {
     // Odpalenie silnika analitycznego
     initAnalytics();
 
+    // Układ bazowy zaprojektowano dla wysokości ~900px. Na niższych ekranach (np. laptop 1366x768)
+    // kolumny wychodziły poza ekran - skalujemy je proporcjonalnie do dostępnej wysokości.
+    const f = Math.min(1, (screenH - 90) / 810);
+    const col = (y, h) => ({ y: Math.round(70 + (y - 70) * f), h: Math.max(120, Math.round(h * f)) });
+    const ramW = Math.min(500, screenW - 2 * wLeft - 60);
+
     initializeLayout({
-      scene:   { x: 20, y: 70, w: wLeft, h: 150, pinned: false, minimized: false, z: 10 },
-      player:  { x: 20, y: 240, w: wLeft, h: 320, pinned: false, minimized: false, z: 10 },
-      builder: { x: 20, y: 580, w: wLeft, h: 300, pinned: false, minimized: false, z: 10 },
-      opis:    { x: screenW - wRight - 20, y: 70, w: wRight, h: 180, pinned: false, minimized: false, z: 10 },
-      guide:   { x: screenW - wRight - 20, y: 270, w: wRight, h: 340, pinned: false, minimized: false, z: 10 },
-      console: { x: screenW - wRight - 20, y: 630, w: wRight, h: 250, pinned: false, minimized: false, z: 10 },
-      ram:     { x: screenW / 2 - 250, y: screenH - 260, w: 500, h: 240, pinned: false, minimized: false, z: 10 }
+      scene:   { x: 20, ...col(70, 150), w: wLeft, pinned: false, minimized: false, z: 10 },
+      player:  { x: 20, ...col(240, 320), w: wLeft, pinned: false, minimized: false, z: 10 },
+      builder: { x: 20, ...col(580, 300), w: wLeft, pinned: false, minimized: false, z: 10 },
+      opis:    { x: screenW - wRight - 20, ...col(70, 180), w: wRight, pinned: false, minimized: false, z: 10 },
+      guide:   { x: screenW - wRight - 20, ...col(270, 340), w: wRight, pinned: false, minimized: false, z: 10 },
+      console: { x: screenW - wRight - 20, ...col(630, 250), w: wRight, pinned: false, minimized: false, z: 10 },
+      ram:     { x: screenW / 2 - ramW / 2, y: screenH - Math.round(260 * f), w: ramW, h: Math.max(160, Math.round(240 * f)), pinned: false, minimized: false, z: 10 }
     });
 
     //const hasSeenTutorial = localStorage.getItem('edualgo_tutorial_completed');
@@ -70,23 +83,34 @@ export default function App() {
   if (Object.keys(windowsData).length === 0) return <div className="h-screen w-screen bg-gray-950"></div>;
 
   return (
-    <div className="relative h-screen w-screen bg-black text-white overflow-hidden font-sans">
+    <div
+      className="app-root relative h-dvh w-full bg-black text-white overflow-hidden font-sans"
+      data-mobile={isMobile ? "true" : "false"}
+      data-sheet={isMobile ? mobileSheet : undefined}
+      // scrollIntoView() (autoscroll list kroków) potrafił przewinąć cały kontener aplikacji,
+      // chowając nagłówek - kontener nigdy nie powinien być przewijany
+      onScroll={(e) => { if (e.currentTarget.scrollTop || e.currentTarget.scrollLeft) { e.currentTarget.scrollTop = 0; e.currentTarget.scrollLeft = 0; } }}
+    >
       {showTutorial && <TutorialOverlay onComplete={() => setShowTutorial(false)} windowsData={windowsData} zIndexManager={bringToFront} />}
 
-      <main className="tutorial-canvas absolute inset-0 z-0 bg-gray-950 flex flex-col">
+      <main className={clsx("tutorial-canvas z-0 bg-gray-950 flex flex-col", isMobile ? "mobile-canvas-area" : "absolute inset-0")}>
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none flex flex-col items-center">
-             <Cpu size={250} />
-             <h1 className="text-7xl font-black tracking-widest mt-6">EduAlgo System</h1>
+             <Cpu size={isMobile ? 120 : 250} />
+             <h1 className={clsx("font-black tracking-widest mt-6 whitespace-nowrap", isMobile ? "text-3xl" : "text-7xl")}>EduAlgo System</h1>
           </div>
           <EditorCanvas />
       </main>
 
-      <header className="tutorial-header absolute top-0 left-0 right-0 h-14 bg-gray-950/90 backdrop-blur-md border-b border-gray-800 flex items-center justify-between px-6 z-[100] shadow-md pointer-events-auto">
-        <div className="flex items-center gap-3">
-          <Cpu className="text-green-500 w-8 h-8 drop-shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-          <h1 className="text-lg font-bold tracking-wider text-gray-200">EDUALGO SYSTEM</h1>
+      <header className={clsx(
+        "tutorial-header absolute top-0 left-0 right-0 bg-gray-950/90 backdrop-blur-md border-b border-gray-800 flex items-center justify-between z-[100] shadow-md pointer-events-auto",
+        isMobile ? "h-12 px-3" : "h-14 px-6"
+      )}>
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Cpu className={clsx("text-green-500 shrink-0 drop-shadow-[0_0_8px_rgba(34,197,94,0.5)]", isMobile ? "w-6 h-6" : "w-8 h-8")} />
+          <h1 className={clsx("font-bold tracking-wider text-gray-200 truncate", isMobile ? "text-sm" : "text-lg")}>EDUALGO SYSTEM</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className={clsx("flex items-center shrink-0", isMobile ? "gap-2" : "gap-3")}>
+          {!isMobile && (
           <button
               onClick={() => {
                 trackEvent('ui', 'window_layout_auto');
@@ -96,14 +120,16 @@ export default function App() {
             >
               <Layout size={14} /> UŁÓŻ OKNA
             </button>
+          )}
           <button
               onClick={() => {
                   trackEvent('tutorial', 'tutorial_manual_start', 'header_button');
                   setShowTutorial(true);
               }}
-              className="px-3 py-1.5 bg-indigo-900/30 text-indigo-400 border border-indigo-800 hover:bg-indigo-900/50 rounded text-xs font-bold transition-all flex items-center gap-1.5"
+              aria-label="Poradnik"
+              className={clsx("bg-indigo-900/30 text-indigo-400 border border-indigo-800 hover:bg-indigo-900/50 rounded text-xs font-bold transition-all flex items-center gap-1.5", isMobile ? "p-2" : "px-3 py-1.5")}
           >
-              <HelpCircle size={14} /> PORADNIK
+              <HelpCircle size={isMobile ? 16 : 14} /> {!isMobile && "PORADNIK"}
           </button>
           <button
               onClick={() => {
@@ -112,9 +138,10 @@ export default function App() {
                       resetMemory();
                   }
               }}
-              className="px-3 py-1.5 bg-red-900/30 text-red-400 border border-red-800 hover:bg-red-900/50 rounded text-xs font-bold transition-all flex items-center gap-1.5"
+              aria-label="Restart"
+              className={clsx("bg-red-900/30 text-red-400 border border-red-800 hover:bg-red-900/50 rounded text-xs font-bold transition-all flex items-center gap-1.5", isMobile ? "p-2" : "px-3 py-1.5")}
           >
-              <RotateCcw size={14} /> RESTART
+              <RotateCcw size={isMobile ? 16 : 14} /> {!isMobile && "RESTART"}
           </button>
         </div>
       </header>
@@ -190,6 +217,8 @@ export default function App() {
             <div className="flex-1 text-xs text-gray-300 leading-relaxed overflow-y-auto custom-scrollbar italic border-l-2 border-indigo-900/30 pl-3">{activeAlgoDesc}</div>
         </div>
       </FloatingWindow>
+
+      {isMobile && <MobileNav />}
 
       <SimulationErrorModal />
 

@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
+import type { ReactFlowInstance } from 'reactflow';
+import { useIsMobile } from '../../hooks/useIsMobile';
 // USUNIĘTO 'Controls' z importu poniżej:
 import ReactFlow, { Background, useNodesState, useEdgesState, MarkerType } from 'reactflow';
 import type { Node, Edge, Connection, NodeMouseHandler } from 'reactflow';
@@ -27,6 +29,9 @@ export const EditorCanvas = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   const nodesRef = useRef<Node[]>([]);
+  const isMobile = useIsMobile();
+  const rfInstance = useRef<ReactFlowInstance | null>(null);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     nodesRef.current = nodes;
@@ -132,6 +137,27 @@ export const EditorCanvas = () => {
 
   }, [activeState, isSandboxMode, isConnectionNew, isNodeNew, setNodes, setEdges]);
 
+  // TRYB MOBILNY: mały ekran - automatycznie dopasowujemy widok do wszystkich węzłów
+  // (po zmianie liczby węzłów oraz po zmianie rozmiaru obszaru, np. wysunięciu panelu)
+  const nodeCount = nodes.length;
+  useEffect(() => {
+    if (!isMobile) return;
+    const fit = () => rfInstance.current?.fitView({ padding: 0.15, maxZoom: 1, duration: 250 });
+    const t = window.setTimeout(fit, 60);
+    return () => window.clearTimeout(t);
+  }, [isMobile, nodeCount]);
+
+  useEffect(() => {
+    if (!isMobile || !wrapperRef.current || typeof ResizeObserver === 'undefined') return;
+    let t: number | undefined;
+    const ro = new ResizeObserver(() => {
+      window.clearTimeout(t);
+      t = window.setTimeout(() => rfInstance.current?.fitView({ padding: 0.15, maxZoom: 1, duration: 200 }), 280);
+    });
+    ro.observe(wrapperRef.current);
+    return () => { ro.disconnect(); window.clearTimeout(t); };
+  }, [isMobile]);
+
   const onConnect = useCallback((params: Connection) => {
     // Kiedy użytkownik przeciągnie strzałkę z Węzła A z portu 'next' do Węzła B
     // Przykład: target_expression: "0x100", field_name: "next", source_expression: "0x108"
@@ -153,9 +179,9 @@ export const EditorCanvas = () => {
   }, [setVariable, isSandboxMode]);
 
   return (
-    <div style={{ width: '100%', height: '100%' }}>
+    <div ref={wrapperRef} style={{ width: '100%', height: '100%' }}>
       {isSandboxMode && (
-         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-indigo-600/90 text-white px-6 py-2 rounded-full text-xs font-bold pointer-events-none shadow-lg border border-indigo-400 animate-pulse">
+         <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 z-50 bg-indigo-600/90 text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-bold pointer-events-none shadow-lg border border-indigo-400 animate-pulse whitespace-nowrap">
             TRYB TESTOWY (SANDBOX)
          </div>
       )}
@@ -169,10 +195,12 @@ export const EditorCanvas = () => {
         onNodeClick={onNodeClick}
         nodeTypes={nodeTypes}
         proOptions={proOptions}
+        onInit={(instance) => { rfInstance.current = instance; }}
+        minZoom={0.2}
         fitView
       >
         <Background color={isSandboxMode ? "#1e1b4b" : "#111"} gap={25} size={1} />
       </ReactFlow>
     </div>
   );
-};
+};
