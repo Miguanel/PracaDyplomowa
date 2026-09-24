@@ -8,6 +8,7 @@ import { useMemoryStore } from '../store/memoryStore';
 import { useMobileLayout } from '../store/mobileLayoutStore';
 import { usePlayerUi, CONSOLE_LANGUAGES } from '../store/playerUiStore';
 import { PlayerControls } from '../features/AlgoEditor/PlayerControls';
+import { AlgorithmSelect } from '../features/AlgoEditor/AlgorithmSelect';
 import { translateStep, LANGUAGE_LABELS } from '../utils/codeTranslators';
 import { useCssVarHeight } from '../hooks/useCssVarHeight';
 import type { AlgoStep } from '../assets/types';
@@ -38,7 +39,6 @@ const ExpandBtn = ({ id, label }: { id: string; label: string }) => {
 
 export const MobileStepBar = () => {
   const strips = useMobileLayout(s => s.strips);
-  const openPanel = useMobileLayout(s => s.openPanel);
   const activeAlgorithm = useMemoryStore(s => s.activeAlgorithm);
   const currentStepIndex = useMemoryStore(s => s.currentStepIndex);
   const consoleTab = usePlayerUi(s => s.consoleTab);
@@ -76,19 +76,26 @@ export const MobileStepBar = () => {
             </div>
             <ExpandBtn id="player" label="Odtwarzacz" />
           </div>
-          {activeAlgorithm ? (
+          {/* Wybór / zmiana scenariusza - zawsze dostępny bezpośrednio na pasku */}
+          <div className="mt-1.5 flex items-center gap-1.5 min-w-0">
+            <ListMusic size={13} className="text-indigo-400 shrink-0" />
+            <AlgorithmSelect
+              placeholder="Wybierz scenariusz..."
+              className={clsx(
+                "flex-1 min-w-0 truncate !text-[12px] font-bold rounded-md border px-2 py-1 bg-gray-900",
+                activeAlgorithm ? "text-gray-200 border-gray-700" : "text-indigo-200 border-indigo-700 bg-indigo-950/60"
+              )}
+            />
+          </div>
+          {activeAlgorithm && (
             <div className="mt-1 flex items-center gap-1.5 text-[11px] leading-tight min-w-0">
               <Play size={11} className="text-green-400 shrink-0" />
               <div className="truncate">
                 {isFinished
-                  ? <span className="text-green-400 font-bold">Algorytm zakończony ✓</span>
+                  ? <span className="text-green-400 font-bold">Zakończono ✓ <span className="text-gray-400 font-normal">- wybierz kolejny scenariusz powyżej</span></span>
                   : step ? <StepText step={step} /> : <span className="text-gray-500 italic">Naciśnij START lub krok →</span>}
               </div>
             </div>
-          ) : (
-            <button onClick={() => openPanel('player')} className="mt-1 w-full flex items-center justify-center gap-2 !py-1.5 !text-[11px] font-bold text-indigo-300 !bg-indigo-950/60 !border !border-indigo-800 !rounded-md">
-              <ListMusic size={13} /> Wybierz algorytm
-            </button>
           )}
         </div>
       )}

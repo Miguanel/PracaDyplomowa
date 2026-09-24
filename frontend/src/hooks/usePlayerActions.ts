@@ -4,6 +4,7 @@
 import { useMemoryStore } from '../store/memoryStore';
 import { usePlayerUi } from '../store/playerUiStore';
 import { trackEvent } from '../services/analytics';
+import { ALGORITHMS_DB } from '../data/algorithms';
 
 export const usePlayerActions = () => {
   const activeAlgorithm = useMemoryStore(s => s.activeAlgorithm);
@@ -49,7 +50,20 @@ export const usePlayerActions = () => {
     }
   };
 
+  // Wybór (lub zmiana) scenariusza: zatrzymanie, czyszczenie pamięci i załadowanie nowego algorytmu
+  const selectAlgorithm = async (id: string) => {
+    if (!id) return;
+    const store = useMemoryStore.getState();
+    const algo = [...ALGORITHMS_DB, ...(store.customAlgorithms || [])].find(a => a.id === id);
+    if (!algo) return;
+    trackEvent('player', 'algorithm_run', algo.title);
+    setIsPlaying(false);
+    await store.resetMemory();
+    await useMemoryStore.getState().loadAlgorithm(algo);
+  };
+
   return {
+    selectAlgorithm,
     activeAlgorithm, currentStepIndex, isLoading, isPlaying, isDone,
     canReset: !isLoading && !!activeAlgorithm,
     canStepBack: !!activeAlgorithm && !isPlaying && !isLoading && currentStepIndex >= 0,

@@ -599,27 +599,35 @@ export const useMemoryStore = create((set, get) => ({
         } catch { console.error("Save error"); }
     },
 
-    nextAlgoStep: async () => { await get().nextGraphStep(); },
+    // ODTWARZACZ: zwykłe odtwarzanie scenariusza - operacje trafiają bezpośrednio do pamięci
+    // (bez trybu testowego). Jeśli wcześniej działał Sandbox Kreatora, zaczynamy od czystej pamięci.
+    nextAlgoStep: async () => {
+        if (get().isStepping) return;
+        if (get().isSandboxMode) await get().resetMemory();
+        await get().nextGraphStep({ sandbox: false });
+    },
 
     // Blokada: kolejny krok nie może wystartować, zanim poprzedni się nie zakończy
     // (przy wolnym backendzie autoodtwarzanie co 1s nakładało kroki na siebie)
     isStepping: false,
 
-    nextGraphStep: async () => {
+    // KREATOR: domyślnie wykonanie w trybie testowym (Sandbox) - zmiany są podświetlane,
+    // a po wyjściu z Sandboxa pamięć wraca do stanu sprzed testu.
+    nextGraphStep: async ({ sandbox = true } = {}) => {
         if (get().isStepping) return;
         set({ isStepping: true });
         try {
-            await get()._nextGraphStepImpl();
+            await get()._nextGraphStepImpl(sandbox);
         } finally {
             set({ isStepping: false });
         }
     },
 
-    _nextGraphStepImpl: async () => {
+    _nextGraphStepImpl: async (sandbox) => {
         const { nodes, edges, activeNodeId, runAlgorithmStep, isSandboxMode, enterSandboxMode } = get();
         if (!nodes.length) return;
 
-        if (!isSandboxMode) await enterSandboxMode();
+        if (sandbox && !isSandboxMode) await enterSandboxMode();
 
         let currentNodeId = activeNodeId;
 

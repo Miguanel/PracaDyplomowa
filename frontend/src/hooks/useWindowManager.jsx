@@ -50,10 +50,15 @@ export const useWindowManager = () => {
         const parsed = JSON.parse(saved);
         const clamped = {};
         for (const [id, win] of Object.entries(parsed)) {
+          // zapisany układ mógł pochodzić z większego ekranu - dopasowujemy też ROZMIAR,
+          // inaczej narożniki do zmiany wielkości lądowały poza ekranem
+          const w = Math.min(win.w, screenW - 10);
+          const h = Math.min(win.h, screenH - 56 - 10);
           clamped[id] = {
             ...win,
-            x: Math.max(0, Math.min(win.x, screenW - win.w)),
-            y: Math.max(56, Math.min(win.y, screenH - (win.minimized ? MINIMIZED_HEIGHT : win.h)))
+            w, h,
+            x: Math.max(0, Math.min(win.x, screenW - w)),
+            y: Math.max(56, Math.min(win.y, screenH - (win.minimized ? MINIMIZED_HEIGHT : h)))
           };
         }
         setWindowsData(clamped);
@@ -142,11 +147,13 @@ export const useWindowManager = () => {
       let changed = false;
       for (const [id, win] of Object.entries(newData)) {
         if (win.pinned) continue;
-        const h = win.minimized ? MINIMIZED_HEIGHT : win.h;
-        const newX = Math.max(0, Math.min(win.x, screenW - win.w));
+        const newW = Math.min(win.w, screenW - 10);
+        const newH = Math.min(win.h, screenH - 56 - 10);
+        const h = win.minimized ? MINIMIZED_HEIGHT : newH;
+        const newX = Math.max(0, Math.min(win.x, screenW - newW));
         const newY = Math.max(56, Math.min(win.y, screenH - h));
-        if (newX !== win.x || newY !== win.y) {
-          newData[id] = { ...win, x: newX, y: newY };
+        if (newX !== win.x || newY !== win.y || newW !== win.w || newH !== win.h) {
+          newData[id] = { ...win, x: newX, y: newY, w: newW, h: newH };
           changed = true;
         }
       }

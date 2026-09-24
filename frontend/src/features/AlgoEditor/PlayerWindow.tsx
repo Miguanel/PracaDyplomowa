@@ -5,10 +5,9 @@ import { useMemoryStore } from '../../store/memoryStore';
 import { usePlayerUi } from '../../store/playerUiStore';
 import { usePlayerActions } from '../../hooks/usePlayerActions';
 import { PlayerControls } from './PlayerControls';
-import { ALGORITHMS_DB } from '../../data/algorithms';
+import { AlgorithmSelect } from './AlgorithmSelect';
 import { Play, CheckCircle2, ChevronRight, Database } from 'lucide-react';
 import clsx from 'clsx';
-import { trackEvent } from '../../services/analytics';
 import type { FloatingWindowProps, AlgoStep, ComparePayload } from '../../assets/types';
 
 export const PlayerWindow = ({ windowState, windowActions, zIndexManager }: FloatingWindowProps) => {
@@ -16,9 +15,6 @@ export const PlayerWindow = ({ windowState, windowActions, zIndexManager }: Floa
     activeAlgorithm,
     currentStepIndex,
     nextAlgoStep,
-    resetMemory,
-    loadAlgorithm,
-    customAlgorithms,
     fetchAlgorithms
   } = useMemoryStore();
 
@@ -59,16 +55,6 @@ export const PlayerWindow = ({ windowState, windowActions, zIndexManager }: Floa
     return () => clearTimeout(timer);
   }, [currentStepIndex, activeAlgorithm, windowState?.h, windowState?.minimized]);
 
-  const handleSelectAlgo = (id: string) => {
-    if (!id) return;
-    const allAlgorithms = [...ALGORITHMS_DB, ...(customAlgorithms || [])];
-    const algo = allAlgorithms.find(a => a.id === id);
-    if (algo) {
-        trackEvent('player', 'algorithm_run', algo.title);
-        setIsPlaying(false);
-        resetMemory().then(() => loadAlgorithm(algo));
-    }
-  };
 
   // ==========================================================================
   // WIDOK: NAGŁÓWEK
@@ -100,21 +86,7 @@ export const PlayerWindow = ({ windowState, windowActions, zIndexManager }: Floa
 
       {/* SEKTOR 1: GÓRA (Przyklejony) */}
       <div className="shrink-0 p-2 bg-gray-900/50 border-b border-gray-800 z-10">
-         <select
-            className="w-full bg-gray-950 text-gray-200 text-[11px] font-bold p-1.5 rounded border border-indigo-900/50 outline-none focus:border-indigo-500 cursor-pointer shadow-inner"
-            onChange={(e) => handleSelectAlgo(e.target.value)}
-            value={activeAlgorithm?.id || ""}
-         >
-            <option value="" disabled>-- Wybierz algorytm --</option>
-            <optgroup label="Baza Wiedzy EduAlgo">
-                {ALGORITHMS_DB.map(a => <option key={a.id} value={a.id}>{a.title}</option>)}
-            </optgroup>
-            {customAlgorithms?.length > 0 && (
-                <optgroup label="Twoje Projekty">
-                    {customAlgorithms.map(a => <option key={a.id} value={a.id}>{a.title}</option>)}
-                </optgroup>
-            )}
-         </select>
+         <AlgorithmSelect className="w-full bg-gray-950 text-gray-200 text-[11px] font-bold p-1.5 rounded border border-indigo-900/50 focus:border-indigo-500 shadow-inner" />
       </div>
 
       {/* SEKTOR 2: ŚRODEK (Osobny kontener ze scrollem) */}

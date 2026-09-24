@@ -60,7 +60,8 @@ export interface MemoryStoreState {
   fetchAlgorithms: () => Promise<void>;
   saveCustomAlgorithm: (algo: Algorithm) => Promise<void>;
   nextAlgoStep: () => Promise<void>;
-  nextGraphStep: () => Promise<void>;
+  /** Kreator: wykonanie kroku (domyślnie w trybie Sandbox) */
+  nextGraphStep: (opts?: { sandbox?: boolean }) => Promise<void>;
 }
 
 export declare const useMemoryStore: UseBoundStore<StoreApi<MemoryStoreState>>;

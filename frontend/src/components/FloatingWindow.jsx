@@ -17,6 +17,35 @@ export const FloatingWindow = ({
   const sheet = useMobileLayout(s => s.sheet);
   const toggleFull = useMobileLayout(s => s.toggleFull);
   const setSheet = useMobileLayout(s => s.setSheet);
+  const sheetHeight = useMobileLayout(s => s.sheetHeight);
+  const setSheetHeight = useMobileLayout(s => s.setSheetHeight);
+
+  // TRYB MOBILNY: zmiana wysokości arkusza przeciąganiem uchwytu (w górę / w dół)
+  const handleSheetDragStart = (e) => {
+    const el = windowRef.current;
+    if (!el) return;
+    e.preventDefault();
+    const startY = e.clientY;
+    const startH = el.getBoundingClientRect().height;
+    const maxH = el.getBoundingClientRect().bottom - (parseFloat(getComputedStyle(el.parentElement).getPropertyValue('--hdr-h')) || 48) - (parseFloat(getComputedStyle(el.parentElement).getPropertyValue('--hud-h')) || 0);
+    let lastH = startH;
+    const onMove = (ev) => {
+      lastH = Math.max(60, Math.min(maxH, startH + (startY - ev.clientY)));
+      el.style.height = `${lastH}px`;
+    };
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
+      el.style.height = '';
+      if (lastH < 110) setSheet('closed');          // ściągnięty prawie do końca - chowamy
+      else if (lastH > maxH - 24) setSheet('full');  // wyciągnięty do góry - pełny ekran
+      else setSheetHeight(Math.round(lastH));
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
+  };
 
   const bringToFront = () => zIndexManager(id);
 
@@ -32,7 +61,7 @@ export const FloatingWindow = ({
         ref={windowRef}
         data-id={id}
         aria-hidden={!isVisible}
-        style={{ zIndex: isWelcome ? z : 200 }}
+        style={{ zIndex: isWelcome ? z : 200, ...(!isWelcome && sheetHeight && sheet !== 'full' ? { height: sheetHeight } : null) }}
         className={clsx(
           "floating-window flex flex-col bg-gray-900 overflow-hidden",
           isWelcome ? "mobile-welcome" : "mobile-sheet",
@@ -41,7 +70,17 @@ export const FloatingWindow = ({
         )}
       >
         <div className="mobile-sheet-header shrink-0 bg-gray-950 border-b border-gray-800">
-          {!isWelcome && <div className="mx-auto mt-1.5 mb-0.5 h-1 w-10 rounded-full bg-gray-700" aria-hidden="true" />}
+          {!isWelcome && (
+            <div
+              className="mobile-sheet-grip flex justify-center pt-1.5 pb-1 cursor-ns-resize"
+              style={{ touchAction: 'none' }}
+              onPointerDown={handleSheetDragStart}
+              aria-hidden="true"
+              title="Przeciągnij, aby zmienić wysokość"
+            >
+              <div className="h-1.5 w-12 rounded-full bg-gray-600" />
+            </div>
+          )}
           <div className="flex items-center justify-between gap-2 px-3 py-1.5 min-h-[40px]">
             <div className="flex items-center gap-1.5 min-w-0 text-[11px] font-bold uppercase tracking-widest text-gray-300">
               <span className="shrink-0">{icon}</span>
@@ -128,12 +167,13 @@ export const FloatingWindow = ({
       const deltaX = moveEvent.clientX - startX;
       const deltaY = moveEvent.clientY - startY;
       let newW = startW, newH = startH, newX = startPosX, newY = startPosY;
+      const MIN_W = 250, MIN_H = 150;
 
-      if (dir === 'se' || dir === 'ne') newW = Math.max(250, startW + deltaX);
-      else { newW = Math.max(250, startW - deltaX); if (newW > 250) newX = startPosX + deltaX; }
-
-      if (dir === 'se' || dir === 'sw') newH = Math.max(150, startH + deltaY);
-      else { newH = Math.max(150, startH - deltaY); if (newH > 150) newY = startPosY + deltaY; }
+      // Kierunek: dowolna kombinacja n/s/e/w (narożniki oraz krawędzie okna)
+      if (dir.includes('e')) newW = Math.max(MIN_W, startW + deltaX);
+      if (dir.includes('w')) { newW = Math.max(MIN_W, startW - deltaX); newX = startPosX + (startW - newW); }
+      if (dir.includes('s')) newH = Math.max(MIN_H, startH + deltaY);
+      if (dir.includes('n')) { newH = Math.max(MIN_H, startH - deltaY); newY = Math.max(56, startPosY + (startH - newH)); }
 
       onSizeChange(id, { w: newW, h: newH }, { x: newX, y: newY }, false);
     };
@@ -219,6 +259,10 @@ export const FloatingWindow = ({
           <div style={{ touchAction: 'none' }} onPointerDown={(e) => handleResizeStart(e, 'sw')} className="resizer absolute bottom-0 left-0 w-4 h-4 cursor-sw-resize z-[100] opacity-50 hover:opacity-100"><div className="w-full h-full border-b-2 border-l-2 border-gray-500" /></div>
           <div style={{ touchAction: 'none' }} onPointerDown={(e) => handleResizeStart(e, 'nw')} className="resizer absolute top-0 left-0 w-4 h-4 cursor-nw-resize z-[100] opacity-50 hover:opacity-100"><div className="w-full h-full border-t-2 border-l-2 border-gray-500" /></div>
           <div style={{ touchAction: 'none' }} onPointerDown={(e) => handleResizeStart(e, 'ne')} className="resizer absolute top-0 right-0 w-4 h-4 cursor-ne-resize z-[100] opacity-50 hover:opacity-100"><div className="w-full h-full border-t-2 border-r-2 border-gray-500" /></div>
+          {/* Krawędzie - większy obszar chwytania niż same narożniki */}
+          <div style={{ touchAction: 'none' }} onPointerDown={(e) => handleResizeStart(e, 'e')} className="resizer absolute top-4 bottom-4 right-0 w-1.5 cursor-ew-resize z-[99] hover:bg-blue-500/30" />
+          <div style={{ touchAction: 'none' }} onPointerDown={(e) => handleResizeStart(e, 'w')} className="resizer absolute top-4 bottom-4 left-0 w-1.5 cursor-ew-resize z-[99] hover:bg-blue-500/30" />
+          <div style={{ touchAction: 'none' }} onPointerDown={(e) => handleResizeStart(e, 's')} className="resizer absolute left-4 right-4 bottom-0 h-1.5 cursor-ns-resize z-[99] hover:bg-blue-500/30" />
         </>
       )}
     </div>

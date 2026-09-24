@@ -15,6 +15,9 @@ interface MobileLayoutState {
   strips: Record<StripPanel, boolean>;
   activePanel: string;
   sheet: SheetState;
+  /** Wysokość arkusza ustawiona przeciągnięciem uchwytu (px); null = domyślna (połowa / pełny) */
+  sheetHeight: number | null;
+  setSheetHeight: (h: number | null) => void;
   toggleStrip: (id: StripPanel) => void;
   openPanel: (id: string) => void;
   toggleFromRail: (id: string) => void;
@@ -27,6 +30,8 @@ export const useMobileLayout = create<MobileLayoutState>()((set, get) => ({
 
   activePanel: 'player',
   sheet: 'closed',
+  sheetHeight: null,
+  setSheetHeight: (sheetHeight) => set({ sheetHeight }),
 
   toggleStrip: (id) => set({ strips: { ...get().strips, [id]: !get().strips[id] } }),
 
@@ -48,6 +53,6 @@ export const useMobileLayout = create<MobileLayoutState>()((set, get) => ({
     set({ activePanel: id, sheet: id === 'builder' ? 'full' : (sheet === 'closed' ? 'half' : sheet) });
   },
 
-  setSheet: (sheet) => set({ sheet }),
-  toggleFull: () => set({ sheet: get().sheet === 'full' ? 'half' : 'full' }),
+  setSheet: (sheet) => set({ sheet, sheetHeight: null }),
+  toggleFull: () => set({ sheet: get().sheet === 'full' ? 'half' : 'full', sheetHeight: null }),
 }));

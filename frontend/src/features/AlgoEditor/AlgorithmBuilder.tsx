@@ -291,6 +291,12 @@ export const AlgorithmBuilder = () => {
           {isPlaying ? "PAUZA" : <Play size={16} fill="currentColor" />}
         </button>
         <button onClick={() => useMemoryStore.getState().nextGraphStep()} disabled={isPlaying} className="p-2 bg-gray-800 hover:bg-gray-700 text-white disabled:opacity-50 rounded"><SkipForward size={16} /></button>
+        <span
+          className="self-center ml-1 px-2 py-0.5 rounded-full text-[9px] font-black tracking-wider bg-indigo-900/60 text-indigo-300 border border-indigo-700"
+          title="Kreator wykonuje algorytm w trybie testowym - po wyjściu (reset) pamięć wraca do stanu sprzed testu"
+        >
+          SANDBOX
+        </span>
       </div>
 
       {isMobile && (
