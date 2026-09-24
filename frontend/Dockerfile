@@ -1,7 +1,12 @@
 # ETAP 1: Kompilacja Artefaktów (Builder)
-FROM node:18-alpine AS builder
+# Vite 7 wymaga Node.js 20.19+ (na node:18 build kończył się błędem)
+FROM node:22-alpine AS builder
 
 WORKDIR /app
+
+# Pusty VITE_API_URL = zapytania względne /api/... obsługiwane przez proxy nginx
+ARG VITE_API_URL=""
+ENV VITE_API_URL=$VITE_API_URL
 
 # Instalacja precyzyjna na podstawie pliku blokady (package-lock.json)
 COPY frontend/package.json frontend/package-lock.json ./

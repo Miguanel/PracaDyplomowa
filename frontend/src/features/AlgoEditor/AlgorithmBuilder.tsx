@@ -1,8 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 import { useMemoryStore } from '../../store/memoryStore';
 import { ALGORITHMS_DB } from '../../data/algorithms';
-import { Save, Plus, BookOpen, Trash2, Settings, Play, SkipForward, RotateCcw } from 'lucide-react';
-import { ReactFlow, Background, addEdge, Handle, Position, Connection, Edge, Node } from '@xyflow/react';
+import { Plus, BookOpen, Settings, Play, SkipForward, RotateCcw } from 'lucide-react';
+import { ReactFlow, Background, addEdge, Handle, Position } from '@xyflow/react';
+import type { Connection, Edge, NodeProps } from '@xyflow/react';
+import type { AlgoFlowNode, AlgoNodeData, ComparePayload } from '../../assets/types';
 import '@xyflow/react/dist/style.css';
 import { INSTRUCTION_DEFS } from './instructionDefinitions';
 import clsx from 'clsx';
@@ -10,8 +13,8 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 
 // --- 1. DEFINICJE AUTORSKICH WĘZŁÓW Z EFEKTEM GLOW ---
 
-const StartNode = ({ data, id }: any) => {
-  const activeNodeId = useMemoryStore((s: any) => s.activeNodeId);
+const StartNode = ({ data, id }: NodeProps<AlgoFlowNode>) => {
+  const activeNodeId = useMemoryStore((s) => s.activeNodeId);
   const isActive = activeNodeId === id;
   return (
     <div className={clsx(
@@ -29,15 +32,15 @@ const StartNode = ({ data, id }: any) => {
   );
 };
 
-const ActionNode = ({ data, id }: any) => {
-  const activeNodeId = useMemoryStore((s: any) => s.activeNodeId);
-  const removeAlgorithmStep = useMemoryStore((s: any) => s.removeAlgorithmStep);
+const ActionNode = ({ data, id }: NodeProps<AlgoFlowNode>) => {
+  const activeNodeId = useMemoryStore((s) => s.activeNodeId);
+  const removeAlgorithmStep = useMemoryStore((s) => s.removeAlgorithmStep);
   const isActive = activeNodeId === id;
 
   const stepIndex = parseInt(id.replace('node-', ''), 10);
   const isDeletable = !isNaN(stepIndex);
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDelete = (e: ReactMouseEvent) => {
       e.stopPropagation();
       if (isDeletable) {
           removeAlgorithmStep(stepIndex);
@@ -103,15 +106,15 @@ const ActionNode = ({ data, id }: any) => {
   );
 };
 
-const ConditionNode = ({ data, id }: any) => {
-  const activeNodeId = useMemoryStore((s: any) => s.activeNodeId);
-  const removeAlgorithmStep = useMemoryStore((s: any) => s.removeAlgorithmStep);
+const ConditionNode = ({ data, id }: NodeProps<AlgoFlowNode>) => {
+  const activeNodeId = useMemoryStore((s) => s.activeNodeId);
+  const removeAlgorithmStep = useMemoryStore((s) => s.removeAlgorithmStep);
   const isActive = activeNodeId === id;
 
   const stepIndex = parseInt(id.replace('node-', ''), 10);
   const isDeletable = !isNaN(stepIndex);
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDelete = (e: ReactMouseEvent) => {
       e.stopPropagation();
       if (isDeletable) {
           removeAlgorithmStep(stepIndex);
@@ -149,7 +152,7 @@ const ConditionNode = ({ data, id }: any) => {
 
       <div className="p-3 flex flex-col gap-2 bg-gray-900/90">
         <div className="text-xs font-mono text-center bg-black/50 py-1 rounded border border-gray-700">
-          {data.var_name} <span className="text-purple-400">{data.field_name || '=='}</span> {data.val_payload?.rightValue ?? 'NULL'}
+          {data.var_name} <span className="text-purple-400">{data.field_name || '=='}</span> {String((data.val_payload as ComparePayload | undefined)?.rightValue ?? 'NULL')}
         </div>
         {data.explanation && (
           <div className="text-[10px] text-gray-400 italic border-l-2 border-purple-500/50 pl-2 mt-1">
@@ -194,8 +197,8 @@ const nodeTypes = { startNode: StartNode, actionNode: ActionNode, conditionNode:
 export const AlgorithmBuilder = () => {
   const {
     nodes, edges, onNodesChange, onEdgesChange,
-    loadAlgorithm, customAlgorithms, saveCustomAlgorithm,
-    updateNodeData, nextGraphStep, exitSandboxMode,
+    loadAlgorithm, customAlgorithms,
+    updateNodeData, exitSandboxMode,
     isPlaying, setIsPlaying
   } = useMemoryStore();
 
@@ -205,22 +208,29 @@ export const AlgorithmBuilder = () => {
 
   const [cmdInputs, setCmdInputs] = useState<Record<string, string>>({});
 
+  // TRYB MOBILNY: zamiast panelu bocznego 320px + grafu (brak miejsca) - przełącznik zakładek
+  const isMobile = useIsMobile();
+  const [mobileTab, setMobileTab] = useState<'edit' | 'graph'>('edit');
+
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const onNodeClick = useCallback((_: any, node: Node) => setSelectedNodeId(node.id), []);
+  const onNodeClick = useCallback((_: ReactMouseEvent, node: AlgoFlowNode) => {
+    setSelectedNodeId(node.id);
+    if (isMobile) setMobileTab('edit'); // na telefonie od razu pokazujemy właściwości bloku
+  }, [isMobile]);
   const onPaneClick = useCallback(() => setSelectedNodeId(null), []);
 
   useEffect(() => {
-    let interval: any;
+    let interval: number | undefined;
     if (isPlaying) {
-        interval = setInterval(() => {
+        interval = window.setInterval(() => {
             useMemoryStore.getState().nextGraphStep();
         }, 1200);
     }
-    return () => clearInterval(interval);
+    return () => window.clearInterval(interval);
   }, [isPlaying]);
 
   const onConnect = useCallback((params: Connection | Edge) => {
-    useMemoryStore.setState((state: any) => {
+    useMemoryStore.setState((state) => {
       const filteredEdges = state.edges.filter((e: Edge) => {
         const currentHandle = e.sourceHandle || '';
         const newHandle = params.sourceHandle || '';
@@ -231,7 +241,7 @@ export const AlgorithmBuilder = () => {
   }, []);
 
   const importAlgorithm = (algoId: string) => {
-    let algoToImport = ALGORITHMS_DB.find(a => a.id === algoId) || customAlgorithms.find(a => a.id === algoId);
+    const algoToImport = ALGORITHMS_DB.find(a => a.id === algoId) || customAlgorithms.find(a => a.id === algoId);
     if (algoToImport) {
       setAlgoName(algoToImport.title);
       setAlgoDesc(algoToImport.description);
@@ -243,7 +253,7 @@ export const AlgorithmBuilder = () => {
   const spawnNode = () => {
     const isCondition = selectedCmd === 'COMPARE' || selectedCmd === 'CHECK_NULL';
 
-    const nodeData: any = {
+    const nodeData: AlgoNodeData = {
       cmd: selectedCmd,
       explanation: cmdInputs.explanation || '',
       section: cmdInputs.section || '',
@@ -258,24 +268,18 @@ export const AlgorithmBuilder = () => {
         }
     });
 
-    const newNode: Node = {
+    const newNode: AlgoFlowNode = {
       id: `node-${Date.now()}`,
       type: isCondition ? 'conditionNode' : 'actionNode',
       position: { x: 400, y: 150 },
       data: nodeData,
     };
-    useMemoryStore.setState((state: any) => ({ nodes: [...state.nodes, newNode] }));
+    useMemoryStore.setState((state) => ({ nodes: [...state.nodes, newNode] }));
     setCmdInputs({});
   };
 
   const selectedNode = nodes.find(n => n.id === selectedNodeId);
 
-  // TRYB MOBILNY: zamiast panelu bocznego 320px + grafu (brak miejsca) - przełącznik zakładek
-  const isMobile = useIsMobile();
-  const [mobileTab, setMobileTab] = useState<'edit' | 'graph'>('edit');
-  useEffect(() => {
-    if (isMobile && selectedNodeId) setMobileTab('edit');
-  }, [isMobile, selectedNodeId]);
   const showSidebar = !isMobile || mobileTab === 'edit';
   const showGraph = !isMobile || mobileTab === 'graph';
 
@@ -303,12 +307,12 @@ export const AlgorithmBuilder = () => {
         </div>
       )}
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {showSidebar && (
         <div className={isMobile ? "w-full flex flex-col bg-gray-900 z-10 min-h-0" : "w-80 flex flex-col bg-gray-900 border-r border-gray-800 shadow-2xl z-10 shrink-0"}>
 
           {selectedNode ? (
-            <div className="p-4 flex flex-col gap-4 animate-in fade-in slide-in-from-left-4 h-full overflow-y-auto">
+            <div className="p-4 flex flex-col gap-4 animate-in fade-in slide-in-from-left-4 h-full min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
               <div className="flex justify-between items-center border-b border-gray-800 pb-2">
                 <span className="text-xs font-bold text-yellow-500 flex items-center gap-2"><Settings size={14}/> Właściwości Węzła</span>
                 <button onClick={() => setSelectedNodeId(null)} className="text-gray-500 hover:text-white text-xs">Zamknij</button>
@@ -333,10 +337,10 @@ export const AlgorithmBuilder = () => {
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] text-gray-500 uppercase">Źródło / Prawa strona</label>
                     <input
-                      value={selectedNode.data.source_var || selectedNode.data.val_payload?.rightValue || ''}
+                      value={selectedNode.data.source_var || String((selectedNode.data.val_payload as ComparePayload | undefined)?.rightValue ?? '')}
                       onChange={e => {
                         if (selectedNode.type === 'conditionNode') {
-                            updateNodeData(selectedNode.id, { val_payload: { ...selectedNode.data.val_payload, rightValue: e.target.value } });
+                            updateNodeData(selectedNode.id, { val_payload: { ...(selectedNode.data.val_payload as ComparePayload | undefined), rightValue: e.target.value } });
                         } else {
                             updateNodeData(selectedNode.id, { source_var: e.target.value });
                         }
@@ -366,8 +370,8 @@ export const AlgorithmBuilder = () => {
               )}
             </div>
           ) : (
-            <div className="flex flex-col h-full animate-in fade-in">
-              <div className="p-4 border-b border-gray-800 bg-gray-950 flex flex-col gap-3">
+            <div className="flex flex-col h-full min-h-0 overflow-y-auto overscroll-contain custom-scrollbar animate-in fade-in">
+              <div className="shrink-0 p-4 border-b border-gray-800 bg-gray-950 flex flex-col gap-3">
                 <span className="text-xs font-bold tracking-widest text-gray-500 uppercase flex items-center gap-2"><BookOpen size={14} /> Import z Biblioteki</span>
                 <select onChange={(e) => importAlgorithm(e.target.value)} defaultValue="" className="w-full bg-gray-800 text-gray-300 text-xs p-2 rounded border border-gray-700 outline-none focus:border-indigo-500">
                   <option value="" disabled>-- Wybierz scenariusz --</option>
@@ -375,12 +379,13 @@ export const AlgorithmBuilder = () => {
                 </select>
               </div>
 
-              <div className="p-4 flex flex-col gap-3 border-b border-gray-800">
+              <div className="shrink-0 p-4 flex flex-col gap-3 border-b border-gray-800">
                 <input value={algoName} onChange={(e) => setAlgoName(e.target.value)} placeholder="Tytuł Algorytmu" className="w-full bg-gray-950 text-white font-bold p-2.5 rounded border border-gray-800 outline-none focus:border-blue-500" />
                 <textarea value={algoDesc} onChange={(e) => setAlgoDesc(e.target.value)} placeholder="Fabuła algorytmu..." className="w-full bg-gray-950 text-gray-300 text-xs p-2.5 rounded border border-gray-800 outline-none focus:border-blue-500 resize-none h-24 custom-scrollbar" />
               </div>
 
-              <div className="p-4 flex flex-col gap-3 flex-1 overflow-y-auto">
+              {/* Cały panel boczny przewija się jako jedna lista - wcześniej ta sekcja dostawała 0px wysokości i nie dało się zjechać w dół */}
+              <div className="shrink-0 p-4 flex flex-col gap-3">
                 <span className="text-xs font-bold tracking-widest text-gray-500 uppercase">Dodaj blok operacyjny</span>
 
                 <select
@@ -392,12 +397,12 @@ export const AlgorithmBuilder = () => {
                   className="bg-gray-800 text-sm p-2 rounded border border-gray-700 text-blue-300 font-bold w-full outline-none"
                 >
                   {Object.keys(INSTRUCTION_DEFS).map(cmd => (
-                      <option key={cmd} value={cmd}>{(INSTRUCTION_DEFS as any)[cmd].label || cmd}</option>
+                      <option key={cmd} value={cmd}>{INSTRUCTION_DEFS[cmd].label || cmd}</option>
                   ))}
                 </select>
 
                 <div className="flex flex-col gap-2 mt-1">
-                    {(INSTRUCTION_DEFS as any)[selectedCmd]?.inputs?.map((inputKey: string) => (
+                    {INSTRUCTION_DEFS[selectedCmd]?.inputs?.map((inputKey: string) => (
                         <div key={inputKey} className="flex flex-col gap-1">
                             <label className="text-[10px] text-gray-400 uppercase tracking-wider">{inputKey.replace('_', ' ')}</label>
                             <input
@@ -456,7 +461,6 @@ export const AlgorithmBuilder = () => {
             onPaneClick={onPaneClick}
             nodeTypes={nodeTypes}
             fitView
-            theme="dark"
             minZoom={0.2}
             className="bg-black"
             proOptions={{ hideAttribution: true }}

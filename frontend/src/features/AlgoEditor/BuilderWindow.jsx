@@ -3,7 +3,6 @@ import React from 'react';
 import { FloatingWindow } from '../../components/FloatingWindow';
 import { Wrench } from 'lucide-react';
 import { AlgorithmBuilder } from './AlgorithmBuilder'; // Import komponentu z logiką budowania
-import clsx from 'clsx';
 import { trackEvent } from '../../services/analytics';
 
 export const BuilderWindow = ({ windowState, windowActions, zIndexManager }) => {

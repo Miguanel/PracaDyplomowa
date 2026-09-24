@@ -4,10 +4,11 @@ import { FloatingWindow } from '../../components/FloatingWindow';
 import { useMemoryStore } from '../../store/memoryStore';
 import { BookOpen, CheckCircle2, Circle } from 'lucide-react';
 import clsx from 'clsx';
+import type { FloatingWindowProps } from '../../assets/types';
 
-export const GuideWindow = ({ windowState, windowActions, zIndexManager }) => {
+export const GuideWindow = ({ windowState, windowActions, zIndexManager }: FloatingWindowProps) => {
   const { activeAlgorithm, currentStepIndex } = useMemoryStore();
-  const stepRefs = useRef([]);
+  const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // ==========================================================================
   // KULOODPORNY AUTO-SCROLL
@@ -91,7 +92,7 @@ export const GuideWindow = ({ windowState, windowActions, zIndexManager }) => {
           <div className="space-y-4">
               {activeAlgorithm.steps.map((step, index) => {
                 const isNewGroup = step.group !== lastGroup;
-                if (isNewGroup) { lastGroup = step.group; groupIdx++; }
+                if (isNewGroup) { lastGroup = step.group ?? ''; groupIdx++; }
                 const theme = groupColors[groupIdx % groupColors.length];
                 const isActive = index === currentStepIndex;
                 const isPast = index < currentStepIndex;

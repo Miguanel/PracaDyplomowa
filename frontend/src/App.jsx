@@ -10,7 +10,9 @@ import { FloatingWindow } from './components/FloatingWindow';
 import { WelcomeWindow } from './components/WelcomeWindow';
 import SimulationErrorModal from './components/SimulationErrorModal';
 import { initAnalytics, trackEvent } from './services/analytics';
-import { MobileNav } from './components/MobileNav';
+import { MobileRail } from './components/MobileRail';
+import { MobileStepBar } from './components/MobileStepBar';
+import { MobileRamStrip } from './components/MobileRamStrip';
 import { useIsMobile } from './hooks/useIsMobile';
 import { useMobileLayout } from './store/mobileLayoutStore';
 
@@ -38,8 +40,8 @@ export default function App() {
     updatePos, updateSize, togglePin, toggleMinimize
   };
 
-  const [newNodeLabel, setNewNodeLabel] = useState(`Node_${Math.floor(Math.random() * 100)}`);
-  const [newNodeValue, setNewNodeValue] = useState(Math.floor(Math.random() * 100).toString());
+  const [newNodeLabel, setNewNodeLabel] = useState(() => `Node_${Math.floor(Math.random() * 100)}`);
+  const [newNodeValue, setNewNodeValue] = useState(() => Math.floor(Math.random() * 100).toString());
   const [showTutorial, setShowTutorial] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
 
@@ -218,7 +220,13 @@ export default function App() {
         </div>
       </FloatingWindow>
 
-      {isMobile && <MobileNav />}
+      {isMobile && (
+        <>
+          <MobileStepBar />
+          <MobileRamStrip />
+          <MobileRail />
+        </>
+      )}
 
       <SimulationErrorModal />
 

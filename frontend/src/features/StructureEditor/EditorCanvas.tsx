@@ -59,7 +59,7 @@ export const EditorCanvas = () => {
       if (existingNode) {
           position = existingNode.position;
       } else if (block.visual_x !== null && block.visual_x !== undefined) {
-          position = { x: block.visual_x, y: block.visual_y };
+          position = { x: block.visual_x, y: block.visual_y ?? 100 };
       } else {
           position = { x: 50 + (index * 250), y: 100 };
       }
@@ -166,7 +166,7 @@ export const EditorCanvas = () => {
     }
   }, [connectNodes]);
 
-  const onNodeClick: NodeMouseHandler = useCallback((event, node) => {
+  const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
     if (isSandboxMode) return;
     const varName = window.prompt(`Nazwa zmiennej dla ${node.data.address}:`, "temp");
 

@@ -11,13 +11,13 @@ export const languageTemplates = {
 
 
   cpp: {
-    ALLOC: (v, payload, f, src) => [`Node* ${v} = new Node(${extractVal(payload)});`],
+    ALLOC: (v, payload) => [`Node* ${v} = new Node(${extractVal(payload)});`],
     FREE: (v) => [`delete ${v};`, `${v} = nullptr;`],
     ASSIGN_VAR: (v, p, f, src) => [`Node* ${v} = ${src};`],
     ASSIGN_FIELD: (v, p, f, src) => [`${v}->${f} = ${src};`],
-    STEP_FORWARD: (v, p, f, src) => [`${v} = ${v}->${f};`],
-    SET_FIELD_NULL: (v, p, f, src) => [`${v}->${f} = nullptr;`],
-    COMPARE: (v, payload, operator, src) => {
+    STEP_FORWARD: (v, p, f) => [`${v} = ${v}->${f};`],
+    SET_FIELD_NULL: (v, p, f) => [`${v}->${f} = nullptr;`],
+    COMPARE: (v, payload, operator) => {
        const rightVal = payload?.compareMode === 'variable' ? payload.rightValue : (payload?.rightValue ?? payload);
        const target = payload?.targetNode || 'res';
        return [`bool ${target} = (${v}->val ${operator} ${rightVal});`];
@@ -31,8 +31,8 @@ export const languageTemplates = {
     FREE: (v) => [`del ${v}  # W Pythonie zwykle wystarczy usunąć referencję`],
     ASSIGN_VAR: (v, p, f, src) => [`${v} = ${src}`],
     ASSIGN_FIELD: (v, p, f, src) => [`${v}.${f} = ${src}`],
-    STEP_FORWARD: (v, p, f, src) => [`${v} = ${v}.${f}`],
-    SET_FIELD_NULL: (v, p, f, src) => [`${v}.${f} = None`],
+    STEP_FORWARD: (v, p, f) => [`${v} = ${v}.${f}`],
+    SET_FIELD_NULL: (v, p, f) => [`${v}.${f} = None`],
     COMPARE: (v, payload, operator) => {
        const rightVal = payload?.compareMode === 'variable' ? payload.rightValue : (payload?.rightValue ?? payload);
        const target = payload?.targetNode || 'res';
@@ -47,8 +47,8 @@ export const languageTemplates = {
     FREE: (v) => [`${v} = null; // GC usunie obiekt`],
     ASSIGN_VAR: (v, p, f, src) => [`Node ${v} = ${src};`],
     ASSIGN_FIELD: (v, p, f, src) => [`${v}.${f} = ${src};`],
-    STEP_FORWARD: (v, p, f, src) => [`${v} = ${v}.${f};`],
-    SET_FIELD_NULL: (v, p, f, src) => [`${v}.${f} = null;`],
+    STEP_FORWARD: (v, p, f) => [`${v} = ${v}.${f};`],
+    SET_FIELD_NULL: (v, p, f) => [`${v}.${f} = null;`],
     COMPARE: (v, payload, operator) => {
        const rightVal = payload?.compareMode === 'variable' ? payload.rightValue : (payload?.rightValue ?? payload);
        const target = payload?.targetNode || 'res';
@@ -77,7 +77,8 @@ export const languageTemplates = {
     SET_FIELD_NULL: (v, p, f) => [`MOV eax, [${v}]`, `MOV dword ptr [eax + offset_${f}], 0`],
     COMPARE: (v, payload, operator) => {
        const rightVal = payload?.compareMode === 'variable' ? `[${payload.rightValue}]` : (payload?.rightValue ?? payload);
-       return [`MOV eax, [${v}]`, `CMP [eax + offset_val], ${rightVal}`];
+       const setcc = { '==': 'SETE', '!=': 'SETNE', '<': 'SETL', '<=': 'SETLE', '>': 'SETG', '>=': 'SETGE' }[operator] || 'SETE';
+       return [`MOV eax, [${v}]`, `CMP [eax + offset_val], ${rightVal}`, `${setcc} al  ; wynik warunku (${operator || '=='})`];
     },
     SET_VAL: (v, payload) => [`MOV eax, [${v}]`, `MOV dword ptr [eax + offset_val], ${extractVal(payload)}`],
     DEFAULT: (cmd) => [`; [ASM] Instrukcja: ${cmd}`]
@@ -146,4 +147,19 @@ export const languageTemplates = {
     SET_VAL: (v, payload) => [`ZAPISZ ${extractVal(payload)} DO POLA WARTOŚCI WĘZŁA ${v}`],
     DEFAULT: (cmd) => [`LOGIKA: ${cmd}`]
   }
+};
+
+// Tłumaczy pojedynczy krok algorytmu na linie kodu w wybranym języku.
+// Uwaga: reguła DEFAULT przyjmuje nazwę komendy (wcześniej dostawała nazwę zmiennej).
+export const translateStep = (lang, step) => {
+  const translator = languageTemplates[lang];
+  if (!translator) return [`// Brak słownika dla języka: ${lang}`];
+  if (!step) return [];
+  const rule = translator[step.cmd];
+  if (!rule) return translator.DEFAULT ? translator.DEFAULT(step.cmd) : [`// Brak reguły dla: ${step.cmd}`];
+  return rule(step.var_name, step.val_payload, step.field_name, step.source_var);
+};
+
+export const LANGUAGE_LABELS = {
+  cpp: 'C++', python: 'Python', java: 'Java', c: 'C', javascript: 'JS', csharp: 'C#', assembler: 'ASM', pseudo: 'Pseudo'
 };

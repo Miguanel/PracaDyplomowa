@@ -15,6 +15,9 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
+    /* Projekt łączy pliki .js/.jsx i .ts/.tsx - TS rozumie moduły JS (bez ich sprawdzania) */
+    "allowJs": true,
+    "checkJs": false,
 
     /* Linting */
     "strict": true,

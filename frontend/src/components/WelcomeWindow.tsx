@@ -1,16 +1,36 @@
-// Ścieżka: src/components/WelcomeWindow.jsx
-import { useState, useEffect, useCallback } from 'react';
+// Ścieżka: src/components/WelcomeWindow.tsx
+import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { FloatingWindow } from './FloatingWindow';
-import { Cpu, Rocket, BookOpen, ShieldCheck, Terminal, Zap, Code2, Globe, Server, Play, CheckCircle2, ExternalLink } from 'lucide-react';
+import { Cpu, Rocket, BookOpen, ShieldCheck, Terminal, Zap, Code2, Globe, Server, Play, ExternalLink } from 'lucide-react';
 import clsx from 'clsx';
 
 import { trackEvent } from '../services/analytics';
 
 // Ten sam adres co w memoryStore (VITE_API_URL) - wcześniej na sztywno wpisany Render,
 // przez co lokalnie / w Dockerze okno zawsze pokazywało "Silnik śpi".
-const BACKEND_URL = import.meta.env.VITE_API_URL || 'https://edualgo-backend.onrender.com';
+import { API_URL, HEALTH_URL } from '../config';
+const BACKEND_URL = API_URL;
 
-export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
+interface WelcomeWindowProps {
+  zIndexManager: (id: string) => void;
+  onStartTutorial: () => void;
+  onClose: () => void;
+}
+
+type BackendStatus = 'checking' | 'sleeping' | 'waking' | 'ready';
+
+// --- FUNKCJA SPRAWDZAJĄCA (czysta - bez zmiany stanu komponentu) ---
+const checkBackendHealth = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(HEALTH_URL, { method: 'GET' });
+    return response.ok;
+  } catch {
+    return false;
+  }
+};
+
+export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }: WelcomeWindowProps) => {
   const FIXED_WIDTH = 550;
   const FIXED_HEIGHT = 600;
 
@@ -25,52 +45,46 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
   });
 
   // Statusy: 'checking' | 'sleeping' | 'waking' | 'ready'
-  const [backendStatus, setBackendStatus] = useState('checking');
-
-  // --- FUNKCJA SPRAWDZAJĄCA ---
-  const checkHealth = useCallback(async () => {
-    try {
-      const response = await fetch(`${BACKEND_URL}/`, { method: 'GET' });
-      if (response.ok) {
-        setBackendStatus('ready');
-        return true;
-      }
-    } catch (error) {
-      return false;
-    }
-    return false;
-  }, []);
+  const [backendStatus, setBackendStatus] = useState<BackendStatus>('checking');
 
   // --- LOGIKA POLLINGU ---
+  // (stan zmieniamy dopiero po odpowiedzi serwera - nie synchronicznie w efekcie)
   useEffect(() => {
-    let intervalId;
+    let intervalId: number | undefined;
+    let cancelled = false;
 
     if (backendStatus === 'checking') {
-      checkHealth().then(isUp => {
-        if (!isUp) setBackendStatus('sleeping');
+      checkBackendHealth().then(isUp => {
+        if (!cancelled) setBackendStatus(isUp ? 'ready' : 'sleeping');
       });
     }
 
     // Jeśli kliknięto wybudzanie, sprawdzaj co 3 sekundy czy już wstał
     if (backendStatus === 'waking') {
-      intervalId = setInterval(async () => {
-        const isUp = await checkHealth();
-        if (isUp) clearInterval(intervalId);
+      intervalId = window.setInterval(async () => {
+        const isUp = await checkBackendHealth();
+        if (isUp && !cancelled) {
+          window.clearInterval(intervalId);
+          setBackendStatus('ready');
+        }
       }, 3000);
     }
 
-    return () => clearInterval(intervalId);
-  }, [backendStatus, checkHealth]);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [backendStatus]);
 
   // --- WYMUSZONE BUDZENIE (NOWA KARTA) ---
   const handleWakeBackend = () => {
     setBackendStatus('waking');
     // Bezpośrednie uderzenie w serwer wymusza na Renderze start kontenera
     trackEvent('system', 'wake_backend_clicked', 'manual_trigger');
-    window.open(`${BACKEND_URL}/`, '_blank', 'noopener,noreferrer');
+    window.open(BACKEND_URL ? `${BACKEND_URL}/` : HEALTH_URL, '_blank', 'noopener,noreferrer');
   };
 
-  const handlePosChange = (id, x, y) => setState(prev => ({ ...prev, x, y }));
+  const handlePosChange = (_id: string, x: number, y: number) => setState(prev => ({ ...prev, x, y }));
   const handleSizeChange = () => {};
 
   const MinimizedView = (
@@ -249,7 +263,7 @@ export const WelcomeWindow = ({ zIndexManager, onStartTutorial, onClose }) => {
   );
 };
 
-const FeatureCard = ({ icon, title, desc }) => (
+const FeatureCard = ({ icon, title, desc }: { icon: ReactNode; title: string; desc: string }) => (
     <div className="p-3 bg-gray-800/30 border border-gray-800 rounded-xl hover:border-gray-700 transition-colors">
         <div className="flex items-center gap-2 mb-1.5">
             {icon}

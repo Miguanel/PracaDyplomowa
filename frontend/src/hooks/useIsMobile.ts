@@ -7,7 +7,7 @@ export const MOBILE_QUERY = '(max-width: 899px), (max-height: 500px) and (max-wi
 
 const getMql = () => (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(MOBILE_QUERY) : null);
 
-const subscribe = (callback) => {
+const subscribe = (callback: () => void) => {
   const mql = getMql();
   if (!mql) return () => {};
   mql.addEventListener('change', callback);

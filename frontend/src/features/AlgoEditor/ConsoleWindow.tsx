@@ -1,16 +1,20 @@
 // Ścieżka: src/features/AlgoEditor/ConsoleWindow.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { FloatingWindow } from '../../components/FloatingWindow';
 import { useMemoryStore } from '../../store/memoryStore';
 import { TerminalSquare, Code } from 'lucide-react';
 import clsx from 'clsx';
-import { languageTemplates } from '../../utils/codeTranslators';
+import { translateStep } from '../../utils/codeTranslators';
+import { usePlayerUi, CONSOLE_LANGUAGES } from '../../store/playerUiStore';
+import type { FloatingWindowProps, AlgoStep } from '../../assets/types';
 import { trackEvent } from '../../services/analytics';
 
-export const ConsoleWindow = ({ windowState, windowActions, zIndexManager }) => {
+export const ConsoleWindow = ({ windowState, windowActions, zIndexManager }: FloatingWindowProps) => {
   const { activeAlgorithm, currentStepIndex } = useMemoryStore();
-  const [consoleTab, setConsoleTab] = useState('cpp');
-  const endOfLogRef = useRef(null);
+  // Język wspólny z mobilnym paskiem kroków
+  const consoleTab = usePlayerUi(s => s.consoleTab);
+  const setConsoleTab = usePlayerUi(s => s.setConsoleTab);
+  const endOfLogRef = useRef<HTMLDivElement | null>(null);
 
   // ==========================================================================
   // AUTO-SCROLL (Przewijanie do najnowszej instrukcji)
@@ -49,7 +53,7 @@ export const ConsoleWindow = ({ windowState, windowActions, zIndexManager }) => 
 
         {/* SEKTOR 1: GÓRA (Taby języków - przyklejone) */}
         <div className="shrink-0 flex bg-gray-950 border-b border-gray-800 overflow-x-auto custom-scrollbar z-10 shadow-sm">
-            {['cpp', 'python', 'java', 'c', 'javascript', 'csharp', 'assembler', 'pseudo'].map(tab => (
+            {CONSOLE_LANGUAGES.map(tab => (
                 <button
                     key={tab}
                     onClick={() => {
@@ -76,22 +80,8 @@ export const ConsoleWindow = ({ windowState, windowActions, zIndexManager }) => 
                     <span>Oczekiwanie na instrukcje...</span>
                 </div>
             ) : (
-                activeAlgorithm.steps.slice(0, currentStepIndex + 1).map((step, idx) => {
-                    const translator = languageTemplates[consoleTab];
-
-                    // KULOODPORNE POBIERANIE TŁUMACZENIA
-                    let codeLines = [];
-                    if (!translator) {
-                        codeLines = [`// Brak słownika dla języka: ${consoleTab}`];
-                    } else {
-                        const translateFn = translator[step.cmd] || translator.DEFAULT || (() => [`// Brak reguły dla: ${step.cmd}`]);
-                        codeLines = translateFn(
-                            step.var_name,
-                            step.val_payload,
-                            step.field_name,
-                            step.source_var
-                        );
-                    }
+                activeAlgorithm.steps.slice(0, currentStepIndex + 1).map((step: AlgoStep, idx: number) => {
+                    const codeLines: string[] = translateStep(consoleTab, step);
 
                     const isCurrent = idx === currentStepIndex;
 

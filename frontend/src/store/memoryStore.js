@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { applyNodeChanges, applyEdgeChanges } from '@xyflow/react';
 
-// Wyciągamy adres API ze zmiennych środowiskowych (Vite).
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Adres API ze zmiennych środowiskowych (Vite) - patrz src/config.js
+import { API_URL } from '../config';
 
 export const useMemoryStore = create((set, get) => ({
     nodes: [],
@@ -189,7 +189,7 @@ export const useMemoryStore = create((set, get) => ({
 
             const text = await res.text();
             let parsed;
-            try { parsed = text ? JSON.parse(text) : null; } catch (e) { parsed = null; }
+            try { parsed = text ? JSON.parse(text) : null; } catch { parsed = null; }
 
             const memoryData = parsed?.memory_dump ? parsed.memory_dump : parsed;
             const safeMemoryState = {
@@ -308,7 +308,7 @@ export const useMemoryStore = create((set, get) => ({
             try {
                 const errJson = await response.json();
                 if (errJson && errJson.detail) errorDetail = typeof errJson.detail === 'string' ? errJson.detail : JSON.stringify(errJson.detail);
-            } catch (parseErr) {}
+            } catch { /* odpowiedź bez JSON - zostaje domyślny komunikat */ }
             throw new Error(errorDetail);
         }
 
@@ -377,7 +377,7 @@ export const useMemoryStore = create((set, get) => ({
 
         try {
             switch (instruction.cmd) {
-                case 'ALLOC':
+                case 'ALLOC': {
                     // OCHRONA 5: Memory Leak
                     const existingAddr = getAddr(instruction.var_name);
                     if (existingAddr && isValid(existingAddr)) {
@@ -386,7 +386,8 @@ export const useMemoryStore = create((set, get) => ({
                     await allocateNode(instruction.var_name, instruction.val_payload);
                     break;
 
-                case 'ASSIGN_FIELD':
+                }
+                case 'ASSIGN_FIELD': {
                     requireValid(instruction.var_name);
                     // OCHRONA 6: Dangling Target Connection
                     if (instruction.source_var && instruction.source_var !== "NULL") {
@@ -395,7 +396,8 @@ export const useMemoryStore = create((set, get) => ({
                     await connectNodes(instruction.var_name, instruction.source_var || "NULL", instruction.field_name);
                     break;
 
-                case 'ASSIGN_VAR':
+                }
+                case 'ASSIGN_VAR': {
                     if (instruction.source_var && instruction.source_var !== "NULL") {
                         requireValidOrNull(instruction.source_var);
                     }
@@ -403,7 +405,8 @@ export const useMemoryStore = create((set, get) => ({
                     set(s => ({ codeHistory: [...s.codeHistory, `${instruction.var_name} = ${instruction.source_var || "NULL"};`] }));
                     break;
 
-                case 'FREE':
+                }
+                case 'FREE': {
                     requireValid(instruction.var_name); // Wyłapuje Double Free i Null Free
                     const exprToFree = instruction.var_name;
                     if (exprToFree) {
@@ -421,7 +424,8 @@ export const useMemoryStore = create((set, get) => ({
                     }
                     break;
 
-                case 'SET_VAL':
+                }
+                case 'SET_VAL': {
                     requireValid(instruction.var_name);
                     const targetExprVal = instruction.var_name;
                     if (targetExprVal) {
@@ -437,7 +441,8 @@ export const useMemoryStore = create((set, get) => ({
                     }
                     break;
 
-                case 'STEP_FORWARD':
+                }
+                case 'STEP_FORWARD': {
                     requireValid(instruction.var_name);
                     const stepVar = instruction.var_name;
                     const stepField = instruction.field_name;
@@ -448,7 +453,8 @@ export const useMemoryStore = create((set, get) => ({
                     }
                     break;
 
-                case 'SET_FIELD_NULL':
+                }
+                case 'SET_FIELD_NULL': {
                     requireValid(instruction.var_name);
                     const targetExprNull = instruction.var_name;
                     if (targetExprNull && instruction.field_name) {
@@ -464,14 +470,16 @@ export const useMemoryStore = create((set, get) => ({
                     }
                     break;
 
-                case 'CHECK_NULL':
+                }
+                case 'CHECK_NULL': {
                     // OCHRONA 7: Logika CHECK_NULL (zwraca true gdy węzeł jest Null lub Dangling, co nakieruje na IF=PRAWDA)
                     const addrToCheck = getAddr(instruction.var_name);
                     const isNull = !addrToCheck || !isValid(addrToCheck);
                     console.log(`[CHECK] ${instruction.var_name} ${isNull ? 'JEST NULL' : '!= NULL'}`);
                     return isNull; // Poprawiony zwrot wartości boolean do sterowania krawędzią
 
-                case 'COMPARE':
+                }
+                case 'COMPARE': {
                     requireValid(instruction.var_name);
                     const payloadCmp = instruction.val_payload || {};
                     const leftVar = instruction.var_name;
@@ -524,6 +532,8 @@ export const useMemoryStore = create((set, get) => ({
                         await get().fetchMemory();
                     }
                     return resultBool;
+
+                }
             }
             return true;
         } catch (e) {
@@ -577,7 +587,7 @@ export const useMemoryStore = create((set, get) => ({
         try {
             const res = await fetch(`${API_URL}/api/algorithms`);
             if (res.ok) set({ customAlgorithms: await res.json() });
-        } catch (err) { console.warn("Fetch algorithms error"); }
+        } catch { console.warn("Fetch algorithms error"); }
     },
 
     saveCustomAlgorithm: async (algo) => {
@@ -586,12 +596,26 @@ export const useMemoryStore = create((set, get) => ({
             await fetch(`${API_URL}/api/algorithms`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(algo)
             });
-        } catch (e) { console.error("Save error"); }
+        } catch { console.error("Save error"); }
     },
 
     nextAlgoStep: async () => { await get().nextGraphStep(); },
 
+    // Blokada: kolejny krok nie może wystartować, zanim poprzedni się nie zakończy
+    // (przy wolnym backendzie autoodtwarzanie co 1s nakładało kroki na siebie)
+    isStepping: false,
+
     nextGraphStep: async () => {
+        if (get().isStepping) return;
+        set({ isStepping: true });
+        try {
+            await get()._nextGraphStepImpl();
+        } finally {
+            set({ isStepping: false });
+        }
+    },
+
+    _nextGraphStepImpl: async () => {
         const { nodes, edges, activeNodeId, runAlgorithmStep, isSandboxMode, enterSandboxMode } = get();
         if (!nodes.length) return;
 

@@ -1,11 +1,14 @@
 // Ścieżka: src/features/AlgoEditor/RamWindow.tsx
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { FloatingWindow } from '../../components/FloatingWindow';
 import { useMemoryStore } from '../../store/memoryStore';
 import { Cpu, Tag, ArrowRight, ArrowLeft, Database, CornerDownRight, Layers } from 'lucide-react';
 import clsx from 'clsx';
+import type { FloatingWindowProps } from '../../assets/types';
 
-export const RamWindow = ({ windowState, windowActions, zIndexManager }) => {
+const isPtr = (v: unknown): v is string => typeof v === 'string' && v.startsWith('0x');
+
+export const RamWindow = ({ windowState, windowActions, zIndexManager }: FloatingWindowProps) => {
   const {
     memoryState,
     sandboxMemoryState,
@@ -21,7 +24,7 @@ export const RamWindow = ({ windowState, windowActions, zIndexManager }) => {
   // Grupujemy wszystkie zmienne globalne według adresu, na który wskazują.
   // ==========================================================================
   const stackGrouped = useMemo(() => {
-    const groups = {};
+    const groups: Record<string, string[]> = {};
     if (activeState?.stack) {
         Object.entries(activeState.stack).forEach(([varName, address]) => {
             const addr = address || "NULL";
@@ -30,7 +33,7 @@ export const RamWindow = ({ windowState, windowActions, zIndexManager }) => {
         });
     }
     return groups;
-  }, [activeState?.stack]);
+  }, [activeState]);
 
   // ==========================================================================
   // KOMPONENT: ULEPSZONY STACK DUMP (Pionowa lista)
@@ -153,7 +156,7 @@ export const RamWindow = ({ windowState, windowActions, zIndexManager }) => {
                   <div className="grid grid-cols-1 gap-1.5">
                     <div className="flex items-center justify-between bg-black/30 px-2 py-1.5 rounded border border-white/5">
                         <span className="text-blue-400 font-bold">val</span>
-                        <span className="text-white font-bold text-sm truncate ml-2">{block.data.val}</span>
+                        <span className="text-white font-bold text-sm truncate ml-2">{String(block.data.val)}</span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
@@ -161,8 +164,8 @@ export const RamWindow = ({ windowState, windowActions, zIndexManager }) => {
                             <span className="text-orange-500 flex items-center gap-1 text-[10px] uppercase font-bold mb-0.5">
                                 <ArrowLeft size={10} /> prev
                             </span>
-                            <span className={clsx("truncate", block.data.prev ? "text-orange-300 hover:underline decoration-orange-500/50" : "text-gray-600")}>
-                                {block.data.prev || "NULL"}
+                            <span className={clsx("truncate", isPtr(block.data.prev) ? "text-orange-300 hover:underline decoration-orange-500/50" : "text-gray-600")}>
+                                {isPtr(block.data.prev) ? block.data.prev : "NULL"}
                             </span>
                         </div>
 
@@ -170,8 +173,8 @@ export const RamWindow = ({ windowState, windowActions, zIndexManager }) => {
                             <span className="text-yellow-500 flex items-center gap-1 text-[10px] uppercase font-bold mb-0.5">
                                 next <ArrowRight size={10} />
                             </span>
-                            <span className={clsx("truncate", block.data.next ? "text-yellow-300 hover:underline decoration-yellow-500/50" : "text-gray-600")}>
-                                {block.data.next || "NULL"}
+                            <span className={clsx("truncate", isPtr(block.data.next) ? "text-yellow-300 hover:underline decoration-yellow-500/50" : "text-gray-600")}>
+                                {isPtr(block.data.next) ? block.data.next : "NULL"}
                             </span>
                         </div>
                     </div>

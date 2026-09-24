@@ -74,42 +74,67 @@ button:focus-visible {
 }
 
 /* ==========================================================================
-   UKŁAD MOBILNY (smartfony) - okna stają się panelami dokowanymi
+   UKŁAD MOBILNY (smartfony)
+   - zakładki paneli na prawej krawędzi (.mobile-rail)
+   - u góry pasek bieżącego kroku: Odtwarzacz / Narracja / Kod (.mobile-stepbar)
+   - na dole kompaktowy RAM (.mobile-ramstrip)
+   - pełne panele jako arkusz nad wizualizacją (.mobile-sheet)
+   Wysokości pasków (--hud-h, --ram-h) mierzy JS (useCssVarHeight).
    ========================================================================== */
 :root {
   --hdr-h: 56px;
-  --nav-h: 0px;
-  --sheet-h: 0px;
-  --sheet-w: 0px;
+  --rail-w: 0px;
+  --hud-h: 0px;
+  --hud-w: 0px;
+  --ram-h: 0px;
 }
 
 .app-root[data-mobile="true"] {
   --hdr-h: 48px;
-  --nav-h: calc(56px + env(safe-area-inset-bottom, 0px));
+  --rail-w: 58px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
 }
-.app-root[data-mobile="true"][data-sheet="half"] { --sheet-h: 48dvh; }
-.app-root[data-mobile="true"][data-sheet="full"] { --sheet-h: calc(100dvh - var(--hdr-h) - var(--nav-h)); }
 
-/* Obszar wizualizacji pamięci - zawsze widoczny nad arkuszem */
+/* Obszar wizualizacji pamięci - między paskiem kroków a paskiem RAM */
 .mobile-canvas-area {
   position: absolute;
-  top: var(--hdr-h);
+  top: calc(var(--hdr-h) + var(--hud-h));
   left: 0;
-  right: var(--sheet-w);
-  bottom: calc(var(--nav-h) + var(--sheet-h));
-  transition: bottom .25s ease, right .25s ease;
+  right: var(--rail-w);
+  bottom: var(--ram-h);
+  transition: top .2s ease, bottom .2s ease;
 }
 
-/* Panel dokowany: w pionie wysuwany od dołu */
+.mobile-rail {
+  top: var(--hdr-h);
+  width: var(--rail-w);
+  padding-bottom: var(--safe-b);
+}
+
+.mobile-stepbar {
+  top: var(--hdr-h);
+  right: var(--rail-w);
+}
+
+.mobile-ramstrip {
+  right: var(--rail-w);
+  padding-bottom: var(--safe-b);
+}
+
+/* Pełny panel: arkusz wysuwany od dołu, zawsze POD paskiem kroków (START pozostaje widoczny) */
 .mobile-sheet {
   position: fixed;
   left: 0;
-  right: 0;
-  bottom: var(--nav-h);
-  height: var(--sheet-h);
+  right: var(--rail-w);
+  bottom: 0;
+  padding-bottom: var(--safe-b);
+  height: calc(100dvh - var(--hdr-h) - var(--hud-h));
   border-top: 1px solid #1f2937;
   border-radius: 14px 14px 0 0;
   box-shadow: 0 -12px 30px rgba(0, 0, 0, .6);
+}
+.app-root[data-sheet="half"] .mobile-sheet {
+  height: calc((100dvh - var(--hdr-h) - var(--hud-h)) * 0.58);
 }
 
 /* Ekran powitalny - pełny ekran na telefonie */
@@ -120,12 +145,7 @@ button:focus-visible {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-.mobile-nav {
-  height: var(--nav-h);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-.mobile-nav-btn,
+.mobile-rail-btn,
 .mobile-icon-btn {
   border-radius: 0 !important;
   border: none !important;
@@ -133,7 +153,6 @@ button:focus-visible {
   background: transparent;
   -webkit-tap-highlight-color: transparent;
 }
-.mobile-nav-btn[aria-pressed="true"] { background: #111827; }
 .mobile-icon-btn {
   display: inline-flex;
   align-items: center;
@@ -145,28 +164,40 @@ button:focus-visible {
 }
 .mobile-icon-btn:active { background: #1f2937; color: #fff; }
 
-/* Większe cele dotykowe dla przycisków w nagłówkach paneli (np. sterowanie Odtwarzaczem) */
+/* Większe cele dotykowe dla przycisków w nagłówkach paneli */
 .mobile-header-controls button {
   min-width: 36px;
   min-height: 36px;
   justify-content: center;
 }
 
-/* Telefon w poziomie: panel po prawej stronie, wizualizacja po lewej */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Telefon w poziomie: mało wysokości - paski kroków jako kolumna po lewej,
+   wizualizacja i RAM po prawej, pełny panel jako kolumna przy prawej krawędzi */
 @media (orientation: landscape) {
-  .app-root[data-mobile="true"] { --nav-h: calc(46px + env(safe-area-inset-bottom, 0px)); }
-  .app-root[data-mobile="true"][data-sheet="half"] { --sheet-h: 0px; --sheet-w: min(55vw, 480px); }
-  .app-root[data-mobile="true"][data-sheet="full"] { --sheet-h: 0px; --sheet-w: 100vw; }
+  .mobile-stepbar {
+    right: auto;
+    bottom: 0;
+    width: min(42vw, 360px);
+    overflow-y: auto;
+    border-bottom: none;
+    border-right: 1px solid #1f2937;
+    padding-bottom: var(--safe-b);
+  }
+  .mobile-canvas-area { top: var(--hdr-h); left: var(--hud-w); }
+  .mobile-ramstrip { left: var(--hud-w); }
   .mobile-sheet {
+    height: calc(100dvh - var(--hdr-h)) !important;
     left: auto;
-    top: var(--hdr-h);
-    height: auto;
-    width: var(--sheet-w);
+    width: min(60vw, 480px);
     border-top: none;
     border-left: 1px solid #1f2937;
     border-radius: 0;
     box-shadow: -12px 0 30px rgba(0, 0, 0, .6);
   }
+  .app-root[data-sheet="full"] .mobile-sheet { width: calc(100vw - var(--rail-w)); }
   .mobile-sheet .mobile-sheet-header > div:first-child[aria-hidden] { display: none; }
 }
 

@@ -27,6 +27,8 @@ origins = [
     "http://localhost:3000",            # Alternatywne lokalne środowisko
     "https://edualgo-app.onrender.com"  # Twój frontend na Renderze
 ]
+# Dodatkowe adresy z konfiguracji (np. docker-compose: ALLOWED_ORIGINS=http://localhost)
+origins += [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
 
 # Konfiguracja CORS
 app.add_middleware(
@@ -61,6 +63,11 @@ algorithm_db: Dict[str, AlgorithmModel] = {}
 @app.get("/")
 def root():
     return {"status": "Interaktywny System Wspomagania Edukacji w Zakresie Algorytmów i Struktur Danych Liniowych – Struktur Dynamicznych - Backend został uruchomiony", "version": "2.0"}
+
+@app.get("/api/health")
+def health():
+    """Lekki endpoint do sprawdzania dostępności backendu (ekran powitalny, proxy nginx)"""
+    return {"status": "ok"}
 
 # --- ENDPOINTY ALGORYTMÓW (CRUD) ---
 

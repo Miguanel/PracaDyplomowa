@@ -5,9 +5,39 @@ const SNAP_THRESHOLD = 20;
 const STORAGE_KEY = 'edualgo_layout_state';
 const MINIMIZED_HEIGHT = 40; // Wysokość samej belki okna
 
+// --- LOGIKA PRZYCIĄGANIA (Z REDUKCJĄ KOLIZJI DLA ZMINIMALIZOWANYCH) ---
+// Funkcja czysta: liczy przyciąganie względem AKTUALNEGO stanu okien (wcześniej używała
+// nieaktualnego domknięcia windowsData, więc przyciąganie działało do starych pozycji).
+const calculateSnapping = (windows, id, newX, newY, currentW, currentH) => {
+  let snappedX = newX;
+  let snappedY = newY;
+
+  for (const [wId, win] of Object.entries(windows)) {
+    if (wId === id) continue;
+    const otherW = win.w;
+    // KLUCZOWE: Używamy zredukowanej wysokości, jeśli okno jest zminimalizowane
+    const otherH = win.minimized ? MINIMIZED_HEIGHT : win.h;
+
+    const otherRight = win.x + otherW;
+    const otherBottom = win.y + otherH;
+
+    // Przyciąganie X
+    if (Math.abs(newX - otherRight) < SNAP_THRESHOLD) snappedX = otherRight;
+    else if (Math.abs(newX + currentW - win.x) < SNAP_THRESHOLD) snappedX = win.x - currentW;
+    else if (Math.abs(newX - win.x) < SNAP_THRESHOLD) snappedX = win.x;
+
+    // Przyciąganie Y (tutaj redukcja kolizji ma największe znaczenie)
+    if (Math.abs(newY - otherBottom) < SNAP_THRESHOLD) snappedY = otherBottom;
+    else if (Math.abs(newY + currentH - win.y) < SNAP_THRESHOLD) snappedY = win.y - currentH;
+    else if (Math.abs(newY - win.y) < SNAP_THRESHOLD) snappedY = win.y;
+  }
+
+  return { snappedX, snappedY };
+};
+
 export const useWindowManager = () => {
   const [windowsData, setWindowsData] = useState({});
-  const [topZ, setTopZ] = useState(100);
+  const [, setTopZ] = useState(100);
 
   // --- INICJALIZACJA ---
   const initializeLayout = useCallback((defaultLayout) => {
@@ -27,7 +57,7 @@ export const useWindowManager = () => {
           };
         }
         setWindowsData(clamped);
-      } catch (e) {
+      } catch {
         setWindowsData(defaultLayout);
       }
     } else {
@@ -41,35 +71,6 @@ export const useWindowManager = () => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(windowsData));
     }
   }, [windowsData]);
-
-  // --- LOGIKA PRZYCIĄGANIA (Z REDUKCJĄ KOLIZJI DLA ZMINIMALIZOWANYCH) ---
-  const calculateSnapping = (id, newX, newY, currentW, currentH) => {
-    let snappedX = newX;
-    let snappedY = newY;
-
-    const otherWindows = Object.entries(windowsData).filter(([wId]) => wId !== id);
-
-    for (const [_, win] of otherWindows) {
-      const otherW = win.w;
-      // KLUCZOWE: Używamy zredukowanej wysokości, jeśli okno jest zminimalizowane
-      const otherH = win.minimized ? MINIMIZED_HEIGHT : win.h;
-
-      const otherRight = win.x + otherW;
-      const otherBottom = win.y + otherH;
-
-      // Przyciąganie X
-      if (Math.abs(newX - otherRight) < SNAP_THRESHOLD) snappedX = otherRight;
-      else if (Math.abs(newX + currentW - win.x) < SNAP_THRESHOLD) snappedX = win.x - currentW;
-      else if (Math.abs(newX - win.x) < SNAP_THRESHOLD) snappedX = win.x;
-
-      // Przyciąganie Y (tutaj redukcja kolizji ma największe znaczenie)
-      if (Math.abs(newY - otherBottom) < SNAP_THRESHOLD) snappedY = otherBottom;
-      else if (Math.abs(newY + currentH - win.y) < SNAP_THRESHOLD) snappedY = win.y - currentH;
-      else if (Math.abs(newY - win.y) < SNAP_THRESHOLD) snappedY = win.y;
-    }
-
-    return { snappedX, snappedY };
-  };
 
   // --- AKCJE ---
   const bringToFront = useCallback((id) => {
@@ -89,7 +90,7 @@ export const useWindowManager = () => {
       if (!win) return prev;
 
       const currentH = win.minimized ? MINIMIZED_HEIGHT : win.h;
-      const { snappedX, snappedY } = calculateSnapping(id, x, y, win.w, currentH);
+      const { snappedX, snappedY } = calculateSnapping(prev, id, x, y, win.w, currentH);
 
       let finalX = snappedX;
       let finalY = snappedY;
@@ -104,7 +105,7 @@ export const useWindowManager = () => {
         [id]: { ...prev[id], x: finalX, y: finalY }
       };
     });
-  }, [windowsData]);
+  }, []);
 
   const updateSize = useCallback((id, size, pos) => {
     setWindowsData(prev => ({

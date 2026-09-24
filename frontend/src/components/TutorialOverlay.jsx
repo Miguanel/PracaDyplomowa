@@ -60,18 +60,26 @@ export const TutorialOverlay = ({ onComplete, windowsData, zIndexManager }) => {
       placement: 'bottom',
       title: '7. Zarządzanie Terminalem',
       content: isMobile
-        ? 'Panele przełączasz dolnym paskiem - ponowne dotknięcie aktywnej zakładki chowa panel i odsłania całą wizualizację. Przycisk RESTART (czerwony) czyści pamięć, a znak zapytania uruchamia ten poradnik ponownie.'
+        ? 'Zakładki na prawej krawędzi włączają i wyłączają paski (Odtwórz, Narracja, Kod, RAM) albo otwierają pełne panele (Kreator, Scena, Opis). Ikona ⤢ na pasku rozwija go do pełnego widoku. RESTART (czerwony) czyści pamięć, a znak zapytania uruchamia ten poradnik ponownie.'
         : 'Jeśli okna się pogubią, kliknij "UŁÓŻ OKNA". Przycisk "RESTART" całkowicie czyści pamięć i przywraca system do zera.'
     }
   ], [isMobile]);
 
-  const step = steps[currentStep];
+  const baseStep = steps[currentStep];
+
+  // Na telefonie Odtwarzacz, Narracja, Kod i RAM są paskami (u góry / na dole ekranu) - podświetlamy pasek
+  const MOBILE_STRIP_TARGETS = { player: '[data-strip="player"]', guide: '[data-strip="guide"]', console: '[data-strip="console"]', ram: '.mobile-ramstrip' };
+  const baseMatch = baseStep.target.match(/\[data-id="(.*?)"\]/);
+  const baseId = baseMatch ? baseMatch[1] : null;
+  const mobileStripSelector = isMobile && baseId ? MOBILE_STRIP_TARGETS[baseId] : null;
+  const step = mobileStripSelector ? { ...baseStep, target: mobileStripSelector } : baseStep;
 
   // ==========================================================================
   // WYCIĄGANIE ID OKNA (Dla kuloodpornego CSS)
   // ==========================================================================
   const targetMatch = step.target.match(/\[data-id="(.*?)"\]/);
   const targetId = targetMatch ? targetMatch[1] : null;
+  const stripId = mobileStripSelector ? baseId : null;
 
   // Informujemy też Reacta, żeby po wyłączeniu tutorialu okno zostało na wierzchu
   useEffect(() => {
@@ -79,12 +87,20 @@ export const TutorialOverlay = ({ onComplete, windowsData, zIndexManager }) => {
       zIndexManager(targetId);
     }
     // Na telefonie okna są panelami - wysuwamy panel, o którym mowa w danym kroku
-    if (targetId && isMobile) {
+    if (isMobile) {
       const layout = useMobileLayout.getState();
-      layout.openPanel(targetId);
-      if (layout.sheet === 'full') layout.setSheet('half');
+      if (stripId) {
+        // pasek musi być widoczny, a pełny panel schowany
+        if (!layout.strips[stripId]) layout.toggleStrip(stripId);
+        layout.setSheet('closed');
+      } else if (targetId) {
+        layout.openPanel(targetId);
+        if (layout.sheet === 'full') layout.setSheet('half');
+      } else {
+        layout.setSheet('closed');
+      }
     }
-  }, [targetId, zIndexManager, isMobile]);
+  }, [targetId, stripId, zIndexManager, isMobile]);
 
   const measureTarget = useCallback(() => {
     if (step.target === 'center') {
@@ -98,14 +114,15 @@ export const TutorialOverlay = ({ onComplete, windowsData, zIndexManager }) => {
     } else {
       setTargetRect(null);
     }
-  }, [step]);
+  }, [step.target]);
 
   useEffect(() => {
-    measureTarget();
-    // ponowny pomiar po animacji wysuwania panelu (tryb mobilny)
+    // pomiar w następnej klatce oraz ponownie po animacji wysuwania panelu (tryb mobilny)
+    const raf = window.requestAnimationFrame(measureTarget);
     const t = window.setTimeout(measureTarget, 300);
     window.addEventListener('resize', measureTarget);
     return () => {
+      window.cancelAnimationFrame(raf);
       window.clearTimeout(t);
       window.removeEventListener('resize', measureTarget);
     };
