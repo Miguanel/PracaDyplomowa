@@ -222,3 +222,19 @@ button:focus-visible {
     border-radius: 9999px;
   }
 }
+
+/* Przyciski zoomu w grafie Kreatora (React Flow Controls) - ciemny motyw,
+   bez globalnego stylu <button> z paddingiem */
+.builder-controls .react-flow__controls-button {
+  padding: 4px !important;
+  border-radius: 0 !important;
+  width: 28px;
+  height: 28px;
+  background: #111827 !important;
+  border: none !important;
+  border-bottom: 1px solid #374151 !important;
+  color: #d1d5db;
+}
+.builder-controls .react-flow__controls-button svg { fill: currentColor; max-width: 12px; max-height: 12px; }
+.builder-controls .react-flow__controls-button:hover { background: #1f2937 !important; color: #fff; }
+.builder-controls { box-shadow: 0 0 0 1px #374151 !important; border-radius: 6px; overflow: hidden; }

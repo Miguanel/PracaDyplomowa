@@ -1,10 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import { useMemoryStore } from '../../store/memoryStore';
 import { ALGORITHMS_DB } from '../../data/algorithms';
 import { Plus, BookOpen, Settings, Play, SkipForward, RotateCcw } from 'lucide-react';
-import { ReactFlow, Background, addEdge, Handle, Position } from '@xyflow/react';
-import type { Connection, Edge, NodeProps } from '@xyflow/react';
+import { ReactFlow, Background, Controls, addEdge, Handle, Position, PanOnScrollMode } from '@xyflow/react';
+import type { Connection, Edge, NodeProps, ReactFlowInstance } from '@xyflow/react';
 import type { AlgoFlowNode, AlgoNodeData, ComparePayload } from '../../assets/types';
 import '@xyflow/react/dist/style.css';
 import { INSTRUCTION_DEFS } from './instructionDefinitions';
@@ -199,8 +199,38 @@ export const AlgorithmBuilder = () => {
     nodes, edges, onNodesChange, onEdgesChange,
     loadAlgorithm, customAlgorithms,
     updateNodeData, exitSandboxMode,
-    isPlaying, setIsPlaying
+    isPlaying, setIsPlaying, resetMemory
   } = useMemoryStore();
+  const activeAlgorithmId = useMemoryStore(s => s.activeAlgorithm?.id);
+  const activeNodeId = useMemoryStore(s => s.activeNodeId);
+
+  // --- WIDOK GRAFU ---
+  // Graf scenariusza jest wysoki (pionowy łańcuch bloków). Wcześniej fitView pokazywał całość
+  // w skali 0.2 (nieczytelne), a kółko myszy tylko próbowało zoomować, więc nie dało się
+  // przewinąć grafu w dół. Teraz: kółko/touchpad przewija, Ctrl+kółko zoomuje,
+  // start od pierwszych bloków w czytelnej skali, a podczas wykonania widok podąża za aktywnym blokiem.
+  const rfRef = useRef<ReactFlowInstance<AlgoFlowNode, Edge> | null>(null);
+  const focusStart = useCallback(() => {
+    const inst = rfRef.current;
+    if (!inst) return;
+    const first = useMemoryStore.getState().nodes.slice(0, 4).map(n => ({ id: n.id }));
+    if (first.length) inst.fitView({ nodes: first, maxZoom: 0.9, minZoom: 0.4, padding: 0.2, duration: 250 });
+  }, []);
+
+  useEffect(() => {
+    const t = window.setTimeout(focusStart, 120);
+    return () => window.clearTimeout(t);
+  }, [activeAlgorithmId, focusStart]);
+
+  useEffect(() => {
+    const inst = rfRef.current;
+    if (!inst || !activeNodeId) return;
+    const node = useMemoryStore.getState().nodes.find(n => n.id === activeNodeId);
+    if (!node) return;
+    const w = node.measured?.width ?? 256;
+    const h = node.measured?.height ?? 100;
+    inst.setCenter(node.position.x + w / 2, node.position.y + h / 2, { zoom: Math.max(inst.getZoom(), 0.5), duration: 300 });
+  }, [activeNodeId]);
 
   const [algoName, setAlgoName] = useState("");
   const [algoDesc, setAlgoDesc] = useState("");
@@ -210,13 +240,25 @@ export const AlgorithmBuilder = () => {
 
   // TRYB MOBILNY: zamiast panelu bocznego 320px + grafu (brak miejsca) - przełącznik zakładek
   const isMobile = useIsMobile();
+  // Tryb kompaktowy także w wąskim oknie na komputerze (domyślnie 400px) - wcześniej panel
+  // boczny zajmował 320px, a graf dostawał ~80px szerokości i nie dało się go przeglądać
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [rootWidth, setRootWidth] = useState(1000);
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(entries => setRootWidth(entries[0].contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const compact = isMobile || rootWidth < 640;
   const [mobileTab, setMobileTab] = useState<'edit' | 'graph'>('edit');
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const onNodeClick = useCallback((_: ReactMouseEvent, node: AlgoFlowNode) => {
     setSelectedNodeId(node.id);
-    if (isMobile) setMobileTab('edit'); // na telefonie od razu pokazujemy właściwości bloku
-  }, [isMobile]);
+    if (compact) setMobileTab('edit'); // w trybie kompaktowym od razu pokazujemy właściwości bloku
+  }, [compact]);
   const onPaneClick = useCallback(() => setSelectedNodeId(null), []);
 
   useEffect(() => {
@@ -240,13 +282,17 @@ export const AlgorithmBuilder = () => {
     });
   }, []);
 
-  const importAlgorithm = (algoId: string) => {
+  const importAlgorithm = async (algoId: string) => {
     const algoToImport = ALGORITHMS_DB.find(a => a.id === algoId) || customAlgorithms.find(a => a.id === algoId);
     if (algoToImport) {
       setAlgoName(algoToImport.title);
       setAlgoDesc(algoToImport.description);
-      loadAlgorithm(algoToImport);
       setSelectedNodeId(null);
+      // Czysta pamięć przed nowym scenariuszem - wcześniej zostawały zmienne z poprzedniego
+      // uruchomienia i Sandbox zgłaszał fałszywy "Memory Leak" już przy drugim ALLOC
+      setIsPlaying(false);
+      await resetMemory();
+      await loadAlgorithm(algoToImport);
     }
   };
 
@@ -280,11 +326,11 @@ export const AlgorithmBuilder = () => {
 
   const selectedNode = nodes.find(n => n.id === selectedNodeId);
 
-  const showSidebar = !isMobile || mobileTab === 'edit';
-  const showGraph = !isMobile || mobileTab === 'graph';
+  const showSidebar = !compact || mobileTab === 'edit';
+  const showGraph = !compact || mobileTab === 'graph';
 
   return (
-    <div className="flex flex-col w-full h-full bg-gray-950 text-white font-sans overflow-hidden">
+    <div ref={rootRef} className="flex flex-col w-full h-full bg-gray-950 text-white font-sans overflow-hidden">
       <div className="bg-gray-900 border-b border-gray-800 p-2 flex justify-center gap-2 shadow-lg z-20">
         <button onClick={() => { setIsPlaying(false); useMemoryStore.setState({activeNodeId: null, currentStepIndex: -1}); exitSandboxMode(); }} className="p-2 bg-gray-800 hover:bg-gray-700 text-white rounded"><RotateCcw size={16} /></button>
         <button onClick={() => setIsPlaying(!isPlaying)} className="px-6 bg-indigo-600 hover:bg-indigo-500 text-white flex justify-center items-center rounded">
@@ -299,7 +345,7 @@ export const AlgorithmBuilder = () => {
         </span>
       </div>
 
-      {isMobile && (
+      {compact && (
         <div className="shrink-0 grid grid-cols-2 bg-gray-950 border-b border-gray-800 text-[11px] font-bold uppercase tracking-wider">
           {([['edit', 'Edycja bloków'], ['graph', `Graf (${nodes.length})`]] as const).map(([tab, label]) => (
             <button
@@ -315,7 +361,7 @@ export const AlgorithmBuilder = () => {
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {showSidebar && (
-        <div className={isMobile ? "w-full flex flex-col bg-gray-900 z-10 min-h-0" : "w-80 flex flex-col bg-gray-900 border-r border-gray-800 shadow-2xl z-10 shrink-0"}>
+        <div className={compact ? "w-full flex flex-col bg-gray-900 z-10 min-h-0" : "w-80 flex flex-col bg-gray-900 border-r border-gray-800 shadow-2xl z-10 shrink-0"}>
 
           {selectedNode ? (
             <div className="p-4 flex flex-col gap-4 animate-in fade-in slide-in-from-left-4 h-full min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
@@ -466,12 +512,16 @@ export const AlgorithmBuilder = () => {
             onNodeClick={onNodeClick}
             onPaneClick={onPaneClick}
             nodeTypes={nodeTypes}
-            fitView
+            onInit={(inst) => { rfRef.current = inst; window.setTimeout(focusStart, 120); }}
+            panOnScroll
+            panOnScrollMode={PanOnScrollMode.Free}
             minZoom={0.2}
+            maxZoom={1.5}
             className="bg-black"
             proOptions={{ hideAttribution: true }}
           >
             <Background color="#222" gap={16} />
+            <Controls showInteractive={false} position="bottom-right" className="builder-controls" />
 
           </ReactFlow>
         </div>
