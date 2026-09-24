@@ -31,7 +31,10 @@ export const useMobileLayout = create<MobileLayoutState>()((set, get) => ({
   activePanel: 'player',
   sheet: 'closed',
   sheetHeight: null,
-  setSheetHeight: (sheetHeight) => set({ sheetHeight }),
+  // Własna wysokość obowiązuje tylko dla arkusza "połówkowego" - przy pełnym ekranie
+  // wysokość wynika z CSS, więc przeciągnięcie z trybu 'full' przełącza na 'half'
+  // (wcześniej arkusz po puszczeniu wracał do pełnej wysokości).
+  setSheetHeight: (sheetHeight) => set({ sheetHeight, sheet: get().sheet === 'full' ? 'half' : get().sheet }),
 
   toggleStrip: (id) => set({ strips: { ...get().strips, [id]: !get().strips[id] } }),
 

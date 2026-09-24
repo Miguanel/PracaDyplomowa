@@ -136,6 +136,11 @@ button:focus-visible {
 .app-root[data-sheet="half"] .mobile-sheet {
   height: calc((100dvh - var(--hdr-h) - var(--hud-h)) * 0.58);
 }
+/* Przeciąganie uchwytu arkusza - wysokość z JS, bez animacji */
+.mobile-sheet[data-dragging="1"] {
+  height: var(--sheet-drag-h) !important;
+  transition: none !important;
+}
 
 /* Ekran powitalny - pełny ekran na telefonie */
 .mobile-welcome {

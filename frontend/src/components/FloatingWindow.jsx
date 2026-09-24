@@ -29,15 +29,19 @@ export const FloatingWindow = ({
     const startH = el.getBoundingClientRect().height;
     const maxH = el.getBoundingClientRect().bottom - (parseFloat(getComputedStyle(el.parentElement).getPropertyValue('--hdr-h')) || 48) - (parseFloat(getComputedStyle(el.parentElement).getPropertyValue('--hud-h')) || 0);
     let lastH = startH;
+    // Podczas przeciągania wysokość idzie przez zmienną CSS + atrybut data-dragging
+    // (React ich nie nadpisuje przy ponownym renderze, np. w trakcie autoodtwarzania)
+    el.style.setProperty('--sheet-drag-h', `${startH}px`);
+    el.dataset.dragging = '1';
     const onMove = (ev) => {
       lastH = Math.max(60, Math.min(maxH, startH + (startY - ev.clientY)));
-      el.style.height = `${lastH}px`;
+      el.style.setProperty('--sheet-drag-h', `${lastH}px`);
     };
     const onUp = () => {
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
       document.removeEventListener('pointercancel', onUp);
-      el.style.height = '';
+      delete el.dataset.dragging;
       if (lastH < 110) setSheet('closed');          // ściągnięty prawie do końca - chowamy
       else if (lastH > maxH - 24) setSheet('full');  // wyciągnięty do góry - pełny ekran
       else setSheetHeight(Math.round(lastH));
